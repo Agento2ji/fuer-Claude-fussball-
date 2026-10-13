@@ -13,6 +13,7 @@ import {
   playerMatchStats,
   players,
   suspensions,
+  teamMatchStats,
 } from "@/db/schema";
 import type {
   BroadcastRecord,
@@ -22,6 +23,7 @@ import type {
   PlayerRecord,
   Sourced,
   SuspensionRecord,
+  TeamMatchStatsRecord,
 } from "../types";
 import { type DbLike, type SourceInfo, link, loadMappings, requireSource } from "./common";
 
@@ -125,7 +127,11 @@ export async function writePlayerMatchStats(
     const cardRows: (typeof cards.$inferInsert)[] = [];
     if (r.yellowCards) cardRows.push({ type: "yellow", playerId, matchId, competitionId: competition.id, minute: null, ...provenanceValues(source.id, r) });
     if (r.redCards) cardRows.push({ type: "red", playerId, matchId, competitionId: competition.id, minute: null, ...provenanceValues(source.id, r) });
-    if (cardRows.length) await db.insert(cards).values(cardRows).onConflictDoNothing();
+    // Karten dieses Spiels aus dieser Quelle ersetzen, damit Korrekturen greifen.
+    await db
+      .delete(cards)
+      .where(and(eq(cards.matchId, matchId), eq(cards.playerId, playerId), eq(cards.sourceId, source.id)));
+    if (cardRows.length) await db.insert(cards).values(cardRows);
     written++;
   }
   return written;
@@ -270,6 +276,31 @@ export async function writeBroadcasts(
         target: [broadcasts.matchId, broadcasts.country, broadcasts.broadcaster],
         set: values,
       });
+    written++;
+  }
+  return written;
+}
+
+export async function writeTeamMatchStats(
+  db: DbLike,
+  sources: Map<string, SourceInfo>,
+  records: Sourced<TeamMatchStatsRecord>[],
+): Promise<number> {
+  if (records.length === 0) return 0;
+  const source = requireSource(sources, records[0]!.provenance.source);
+  const matchMap = await loadMappings(db, source.id, "match");
+  const teamMap = await loadMappings(db, source.id, "team");
+  let written = 0;
+  for (const r of records) {
+    const matchId = need(matchMap, r.matchExternalId, "Spiel");
+    const teamId = need(teamMap, r.teamExternalId, "Team");
+    if (matchId === undefined || teamId === undefined) continue;
+    const { matchExternalId, teamExternalId, provenance, ...rest } = r;
+    const values = { ...rest, matchId, teamId, ...provenanceValues(source.id, r) };
+    await db
+      .insert(teamMatchStats)
+      .values(values)
+      .onConflictDoUpdate({ target: [teamMatchStats.matchId, teamMatchStats.teamId], set: values });
     written++;
   }
   return written;

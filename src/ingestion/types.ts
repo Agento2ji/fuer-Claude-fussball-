@@ -96,6 +96,25 @@ export interface PlayerMatchStatsRecord {
   cleanSheet: boolean | null;
 }
 
+export interface TeamMatchStatsRecord {
+  matchExternalId: string;
+  teamExternalId: string;
+  goals: number | null;
+  goalsConceded: number | null;
+  xg: number | null;
+  xga: number | null;
+  possessionPct: number | null;
+  passes: number | null;
+  passAccuracyPct: number | null;
+  shots: number | null;
+  shotsOnTarget: number | null;
+  corners: number | null;
+  setPieceGoals: number | null;
+  ppda: number | null;
+  /** Tore nach Spielabschnitten, Schlüssel z. B. "0-15", "16-30" … "76-90". */
+  goalsByPeriod: Record<string, number> | null;
+}
+
 export interface InjuryRecord {
   playerExternalId: string;
   status: "injured" | "doubtful";

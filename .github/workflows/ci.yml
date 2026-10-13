@@ -39,3 +39,8 @@ jobs:
       - run: npm run db:seed
       - run: npm test
       - run: npm run build
+      - name: E2E-Smoke-Tests mit Testdaten
+        run: |
+          npm run ingest -- testdaten
+          npx playwright install --with-deps chromium
+          npm run test:e2e

@@ -62,3 +62,20 @@ test("Spielseite zeigt Countdown, Sender, Aufstellungen und direkten Vergleich",
   await expect(page.getByText("Direkter Vergleich")).toBeVisible();
   await expect(page.getByText(/erfasste Duelle?/)).toBeVisible();
 });
+
+test("Quoten erst nach Altersbestätigung, mit Hilfehinweis und ohne Pinnacle", async ({ page }) => {
+  await page.goto("/quoten");
+  await expect(page.getByRole("heading", { name: "Quoten nur ab 18 Jahren" })).toBeVisible();
+  await expect(page.locator("main a[href$='/quoten']")).toHaveCount(0);
+
+  await page.getByLabel("Ich bin mindestens 18 Jahre alt.").check();
+  await page.getByRole("button", { name: "Weiter zu den Quoten" }).click();
+  await page.locator("main a[href$='/quoten']").first().click();
+
+  await expect(page.getByText("Auffällige Abweichungen")).toBeVisible();
+  await expect(page.getByText("0800 1 37 27 00")).toBeVisible();
+  await expect(page.getByText(/Modellrechnung/).first()).toBeVisible();
+  await expect(page.getByRole("table").first()).toContainText("Tipico");
+  await expect(page.getByRole("table").first()).toContainText("Winamax");
+  await expect(page.locator("main")).not.toContainText("Pinnacle");
+});

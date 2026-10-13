@@ -52,3 +52,13 @@ test("Formbewertung zeigt Stufe, Perzentil und Erklärung", async ({ page }) => 
   await card.getByRole("button", { name: /Wie entsteht das/ }).click();
   await expect(page.getByRole("dialog")).toContainText("Standardabweichungen");
 });
+
+test("Spielseite zeigt Countdown, Sender, Aufstellungen und direkten Vergleich", async ({ page }) => {
+  await page.goto("/wettbewerbe/TEST");
+  await page.locator("main a[href^='/spiele/']").first().click();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await expect(page.getByText("Übertragung in Deutschland")).toBeVisible();
+  await expect(page.getByText("Voraussichtliche Aufstellung").first()).toBeVisible();
+  await expect(page.getByText("Direkter Vergleich")).toBeVisible();
+  await expect(page.getByText(/erfasste Duelle?/)).toBeVisible();
+});

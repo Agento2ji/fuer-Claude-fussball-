@@ -42,3 +42,13 @@ test("Hell/Dunkel lässt sich umschalten und bleibt erhalten", async ({ page }) 
   await page.reload();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
+
+test("Formbewertung zeigt Stufe, Perzentil und Erklärung", async ({ page }) => {
+  await page.goto("/spieler");
+  await page.getByRole("link", { name: /Jakob Kuhn/ }).click();
+  const card = page.locator("[data-slot=card]", { hasText: "Formbewertung" });
+  await expect(card).toContainText("Bestform der Karriere");
+  await expect(card).toContainText("Perzentil der Karriere");
+  await card.getByRole("button", { name: /Wie entsteht das/ }).click();
+  await expect(page.getByRole("dialog")).toContainText("Standardabweichungen");
+});

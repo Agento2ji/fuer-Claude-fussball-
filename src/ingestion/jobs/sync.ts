@@ -10,6 +10,7 @@ import {
   writeBroadcasts,
   writeContracts,
   writeInjuries,
+  writeLineups,
   writePlayerMatchStats,
   writePlayers,
   writeSuspensions,
@@ -116,6 +117,7 @@ export async function syncTestdaten(db: DbLike, now: Date = new Date()): Promise
     const injuries = await writeInjuries(tx, sources, await provider.getInjuries(), today);
     const suspensions = await writeSuspensions(tx, sources, await provider.getSuspensions());
     const broadcasts = await writeBroadcasts(tx, sources, await provider.getBroadcasts());
+    const lineups = await writeLineups(tx, sources, await provider.getLineups());
     const odds = await writeOdds(tx, sources, code, await provider.getOdds());
     return {
       spiele: m.inserted + m.updated + m.unchanged,
@@ -126,6 +128,7 @@ export async function syncTestdaten(db: DbLike, now: Date = new Date()): Promise
       sperren: suspensions,
       vertraege: contracts,
       uebertragungen: broadcasts,
+      aufstellungen: lineups,
       quotenSnapshots: odds.inserted,
     };
   });

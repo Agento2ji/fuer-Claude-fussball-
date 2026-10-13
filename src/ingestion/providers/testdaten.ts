@@ -19,6 +19,7 @@ import type {
   ContractRecord,
   InjuryProvider,
   InjuryRecord,
+  LineupRecord,
   MatchProvider,
   MatchRecord,
   OddsProvider,
@@ -139,6 +140,7 @@ export interface TestWorld {
   matches: MatchRecord[];
   stats: PlayerMatchStatsRecord[];
   teamStats: TeamMatchStatsRecord[];
+  lineups: LineupRecord[];
   injuries: InjuryRecord[];
   suspensions: SuspensionRecord[];
   contracts: ContractRecord[];
@@ -327,13 +329,63 @@ export function buildTestWorld(now: Date, playedMatchdays = 7, historySeasons = 
     .filter((m) => m.status === "scheduled")
     .flatMap((m) => oddsForMatch(m, now));
 
+  // Aufstellungen: bestätigt für gespielte Partien (Startelf = mindestens 45 Minuten),
+  // voraussichtlich für das jeweils nächste Spiel jedes Teams – ohne Verletzte und Gesperrte.
+  const lineups: LineupRecord[] = [];
+  const byId = new Map(players.map((p) => [p.externalId, p]));
+  for (const m of matches.filter((x) => x.status === "finished")) {
+    for (const s of stats.filter((x) => x.matchExternalId === m.externalId)) {
+      const p = byId.get(s.playerExternalId)!;
+      lineups.push({
+        matchExternalId: m.externalId,
+        teamExternalId: s.teamExternalId,
+        playerExternalId: p.externalId,
+        isProbable: false,
+        isStarter: s.minutes >= 45,
+        positionLabel: p.detailedPosition,
+        shirtNumber: p.shirtNumber,
+        formation: "4-4-2",
+      });
+    }
+  }
+  const unavailable = new Set([
+    ...injuries.filter((i) => i.status === "injured").map((i) => i.playerExternalId),
+    ...suspensions.map((x) => x.playerExternalId),
+  ]);
+  for (const team of teams) {
+    const next = matches.find(
+      (m) => m.status === "scheduled" && (m.homeTeam.externalId === team.externalId || m.awayTeam.externalId === team.externalId),
+    );
+    if (!next) continue;
+    const recentMinutes = (pid: string) =>
+      stats.filter((x) => x.playerExternalId === pid).slice(-3).reduce((a, x) => a + x.minutes, 0);
+    const squad = players.filter((p) => p.teamExternalId === team.externalId && !unavailable.has(p.externalId));
+    for (const pos of Object.keys(STARTING_SLOTS) as Position[]) {
+      const ranked = squad
+        .filter((p) => p.position === pos)
+        .sort((a, b) => recentMinutes(b.externalId) - recentMinutes(a.externalId) || a.shirtNumber! - b.shirtNumber!);
+      ranked.slice(0, STARTING_SLOTS[pos]).forEach((p) =>
+        lineups.push({
+          matchExternalId: next.externalId,
+          teamExternalId: team.externalId,
+          playerExternalId: p.externalId,
+          isProbable: true,
+          isStarter: true,
+          positionLabel: p.detailedPosition,
+          shirtNumber: p.shirtNumber,
+          formation: "4-4-2",
+        }),
+      );
+    }
+  }
+
   const allMatches = [...history.matches, ...matches];
   const allStats = [...history.stats, ...stats];
   const teamStats = allMatches
     .filter((m) => m.status === "finished")
     .flatMap((m) => teamStatsForMatch(m, allStats));
 
-  return { teams, players, matches: allMatches, stats: allStats, teamStats, injuries, suspensions, contracts, broadcasts, odds };
+  return { teams, players, matches: allMatches, stats: allStats, teamStats, lineups, injuries, suspensions, contracts, broadcasts, odds };
 }
 
 /** Saisonbezeichnung, z. B. 2025 → "2025/26". */
@@ -637,6 +689,9 @@ export class TestdatenProvider
   }
   async getTeamMatchStats() {
     return this.tag(this.world.teamStats);
+  }
+  async getLineups() {
+    return this.tag(this.world.lineups);
   }
   async getInjuries() {
     return this.tag(this.world.injuries);

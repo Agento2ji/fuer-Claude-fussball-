@@ -143,6 +143,18 @@ export interface ContractRecord {
   marketValueDate: string | null;
 }
 
+export interface LineupRecord {
+  matchExternalId: string;
+  teamExternalId: string;
+  playerExternalId: string;
+  /** true = voraussichtlich, false = offiziell bestätigt */
+  isProbable: boolean;
+  isStarter: boolean;
+  positionLabel: string | null;
+  shirtNumber: number | null;
+  formation: string | null;
+}
+
 export interface BroadcastRecord {
   matchExternalId: string;
   country: string;

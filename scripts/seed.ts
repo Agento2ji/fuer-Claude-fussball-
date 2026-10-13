@@ -43,7 +43,14 @@ async function main() {
       for (const c of COMPETITIONS) {
         await tx
           .insert(competitions)
-          .values(c)
+          .values({
+            code: c.code,
+            name: c.name,
+            country: c.country,
+            type: c.type,
+            hasMatchPages: c.hasMatchPages,
+            yellowCardSuspensionThreshold: c.yellowCardSuspensionThreshold,
+          })
           .onConflictDoUpdate({
             target: competitions.code,
             set: {

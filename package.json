@@ -14,9 +14,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "lokal": "npm run db:up && npm run db:migrate && npm run db:seed && next dev"
+    "lokal": "npm run db:up && npm run db:migrate && npm run db:seed && next dev",
+    "ingest": "tsx scripts/ingest.ts"
   },
   "dependencies": {
+    "@upstash/redis": "^1.39.0",
     "drizzle-orm": "^0.45.4",
     "next": "15.5.27",
     "postgres": "^3.4.9",

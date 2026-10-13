@@ -5,11 +5,10 @@
  */
 import { config } from "dotenv";
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import { BOOKMAKERS, type GglPermission } from "../src/config/bookmakers";
 import { COMPETITIONS } from "../src/config/competitions";
 import { DATA_SOURCES } from "../src/config/data-sources";
+import { createDb } from "../src/db/client";
 import { bookmakers, competitions, dataSources } from "../src/db/schema";
 import { parseServerEnv } from "../src/lib/env";
 
@@ -17,8 +16,7 @@ config({ path: ".env.local" });
 
 async function main() {
   const env = parseServerEnv(process.env);
-  const client = postgres(env.DATABASE_URL, { max: 1 });
-  const db = drizzle(client);
+  const { db, client } = createDb(env.DATABASE_URL, 1);
 
   try {
     await db.transaction(async (tx) => {

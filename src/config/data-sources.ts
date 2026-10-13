@@ -5,7 +5,12 @@
  * Status `geplant` heißt: Nutzungsbedingungen und Abdeckung sind noch
  * nicht geprüft, die Quelle wird noch nicht abgefragt.
  */
-export type DataSourceKind = "api" | "official_site" | "open_data" | "scrape";
+export type DataSourceKind =
+  | "api"
+  | "official_site"
+  | "open_data"
+  | "scrape"
+  | "testdaten";
 export type DataSourceStatus = "aktiv" | "geplant" | "verworfen";
 
 export interface DataSourceConfig {
@@ -49,4 +54,26 @@ export const DATA_SOURCES = [
     licenseNote:
       "Kostenloser Tarif: 500 Credits/Monat (1 Credit je Markt und Region). Führt tipico_de, winamax_de, pinnacle in Region eu.",
   },
+  {
+    key: "openfootball",
+    name: "openfootball (football.json)",
+    kind: "open_data",
+    baseUrl: "https://raw.githubusercontent.com/openfootball/football.json/master",
+    priority: 30,
+    status: "aktiv",
+    licenseNote:
+      "Gemeinfrei (CC0-1.0). Spielpläne und Endergebnisse der Top-5-Ligen, ohne Champions/Europa League. Ergebnisse teils mehrere Wochen verzögert, Anstoßzeit nicht immer angegeben.",
+  },
+  {
+    key: "testdaten",
+    name: "Testdaten (erfunden)",
+    kind: "testdaten",
+    baseUrl: "local://testdaten",
+    priority: 99,
+    status: "aktiv",
+    licenseNote:
+      "Erfundene Daten für Entwicklung und Entwurf. Nie im Produktivpfad, in der UI immer als Testdaten gekennzeichnet.",
+  },
 ] as const satisfies readonly DataSourceConfig[];
+
+export type DataSourceKey = (typeof DATA_SOURCES)[number]["key"];

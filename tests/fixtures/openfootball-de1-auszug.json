@@ -1,0 +1,46 @@
+{
+ "name": "Deutsche Bundesliga 2026/27",
+ "matches": [
+  {
+   "round": "Matchday 1",
+   "date": "2026-08-28",
+   "time": "20:30",
+   "team1": "FC Bayern München",
+   "team2": "VfB Stuttgart",
+   "score": {
+    "ht": [
+     1,
+     0
+    ],
+    "ft": [
+     5,
+     1
+    ]
+   }
+  },
+  {
+   "round": "Matchday 1",
+   "date": "2026-08-29",
+   "time": "15:30",
+   "team1": "1. FSV Mainz 05",
+   "team2": "SC Paderborn 07",
+   "score": [
+    0,
+    0
+   ]
+  },
+  {
+   "round": "Matchday 5",
+   "date": "2026-10-09",
+   "time": "20:30",
+   "team1": "Borussia Dortmund",
+   "team2": "SV Werder Bremen"
+  },
+  {
+   "round": "Matchday 12",
+   "date": "2026-12-05",
+   "team1": "1. FC Union Berlin",
+   "team2": "Hamburger SV"
+  }
+ ]
+}

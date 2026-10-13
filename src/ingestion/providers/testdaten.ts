@@ -11,6 +11,7 @@
  * `npm run ingest -- testdaten` eingespielt.
  */
 import { CURRENT_SEASON } from "@/config/competitions";
+import { GOAL_PERIODS } from "@/lib/team-stats";
 import type {
   BroadcastProvider,
   BroadcastRecord,
@@ -30,6 +31,7 @@ import type {
   Sourced,
   SuspensionProvider,
   SuspensionRecord,
+  TeamMatchStatsRecord,
   TeamRecord,
 } from "../types";
 
@@ -136,6 +138,7 @@ export interface TestWorld {
   players: PlayerRecord[];
   matches: MatchRecord[];
   stats: PlayerMatchStatsRecord[];
+  teamStats: TeamMatchStatsRecord[];
   injuries: InjuryRecord[];
   suspensions: SuspensionRecord[];
   contracts: ContractRecord[];
@@ -316,7 +319,11 @@ export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
     .filter((m) => m.status === "scheduled")
     .flatMap((m) => oddsForMatch(m, now));
 
-  return { teams, players, matches, stats, injuries, suspensions, contracts, broadcasts, odds };
+  const teamStats = matches
+    .filter((m) => m.status === "finished")
+    .flatMap((m) => teamStatsForMatch(m, stats));
+
+  return { teams, players, matches, stats, teamStats, injuries, suspensions, contracts, broadcasts, odds };
 }
 
 function playerStatsForMatch(
@@ -432,6 +439,46 @@ function playerStatsForMatch(
   });
 }
 
+/** Teamwerte je Spiel – aus den Spielerwerten summiert, damit alles zusammenpasst. */
+function teamStatsForMatch(m: MatchRecord, stats: PlayerMatchStatsRecord[]): TeamMatchStatsRecord[] {
+  const sides = [
+    { team: m.homeTeam.externalId, goals: m.homeScore!, conceded: m.awayScore! },
+    { team: m.awayTeam.externalId, goals: m.awayScore!, conceded: m.homeScore! },
+  ];
+  const sum = (team: string, pick: (s: PlayerMatchStatsRecord) => number | null) =>
+    stats
+      .filter((s) => s.matchExternalId === m.externalId && s.teamExternalId === team)
+      .reduce((acc, s) => acc + (pick(s) ?? 0), 0);
+  const passes = sides.map((x) => sum(x.team, (s) => s.passes));
+  const xg = sides.map((x) => round(sum(x.team, (s) => s.xg), 3));
+  return sides.map((x, i) => {
+    const r = rng(`${m.externalId}-team-${x.team}`);
+    const completed = sum(x.team, (s) => s.passesCompleted);
+    const goalsByPeriod: Record<string, number> = Object.fromEntries(GOAL_PERIODS.map((p) => [p, 0]));
+    for (let g = 0; g < x.goals; g++) {
+      const p = GOAL_PERIODS[Math.floor(r() * GOAL_PERIODS.length)]!;
+      goalsByPeriod[p]! += 1;
+    }
+    return {
+      matchExternalId: m.externalId,
+      teamExternalId: x.team,
+      goals: x.goals,
+      goalsConceded: x.conceded,
+      xg: xg[i]!,
+      xga: xg[1 - i]!,
+      possessionPct: round((passes[i]! / (passes[0]! + passes[1]!)) * 100, 1),
+      passes: passes[i]!,
+      passAccuracyPct: passes[i]! ? round((completed / passes[i]!) * 100, 1) : null,
+      shots: sum(x.team, (s) => s.shots),
+      shotsOnTarget: sum(x.team, (s) => s.shotsOnTarget),
+      corners: Math.round(2 + r() * 7),
+      setPieceGoals: x.goals > 0 && r() < 0.3 ? 1 : 0,
+      ppda: round(7 + r() * 8, 2),
+      goalsByPeriod,
+    };
+  });
+}
+
 function oddsForMatch(m: MatchRecord, now: Date): OddsRecord[] {
   const hi = TEAMS.findIndex((t) => t.name === m.homeTeam.name);
   const ai = TEAMS.findIndex((t) => t.name === m.awayTeam.name);
@@ -505,6 +552,9 @@ export class TestdatenProvider
   }
   async getPlayerMatchStats() {
     return this.tag(this.world.stats);
+  }
+  async getTeamMatchStats() {
+    return this.tag(this.world.teamStats);
   }
   async getInjuries() {
     return this.tag(this.world.injuries);

@@ -13,6 +13,7 @@ import {
   writePlayerMatchStats,
   writePlayers,
   writeSuspensions,
+  writeTeamMatchStats,
 } from "../store/people";
 import type { JobOutcome } from "./run-job";
 
@@ -100,6 +101,7 @@ export async function syncTestdaten(db: DbLike, now: Date = new Date()): Promise
       contracts += await writeContracts(tx, sources, await provider.getContracts(team.externalId));
     }
     const stats = await writePlayerMatchStats(tx, sources, code, await provider.getPlayerMatchStats());
+    const teamStats = await writeTeamMatchStats(tx, sources, await provider.getTeamMatchStats());
     const injuries = await writeInjuries(tx, sources, await provider.getInjuries(), today);
     const suspensions = await writeSuspensions(tx, sources, await provider.getSuspensions());
     const broadcasts = await writeBroadcasts(tx, sources, await provider.getBroadcasts());
@@ -108,6 +110,7 @@ export async function syncTestdaten(db: DbLike, now: Date = new Date()): Promise
       spiele: m.inserted + m.updated + m.unchanged,
       spieler: players,
       statistikZeilen: stats,
+      teamStatistikZeilen: teamStats,
       verletzungen: injuries,
       sperren: suspensions,
       vertraege: contracts,

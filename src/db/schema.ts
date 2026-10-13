@@ -22,6 +22,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -148,6 +149,8 @@ export const competitions = pgTable("competitions", {
   type: competitionType("type").notNull(),
   hasMatchPages: boolean("has_match_pages").notNull().default(false),
   yellowCardSuspensionThreshold: smallint("yellow_card_suspension_threshold"),
+  /** Testdaten-Wettbewerb: nie mit echten Daten mischen, in der UI kennzeichnen. */
+  isTestData: boolean("is_test_data").notNull().default(false),
   ...timestamps(),
 });
 
@@ -204,7 +207,14 @@ export const contracts = pgTable(
     ...provenance(),
     ...timestamps(),
   },
-  (t) => [index("contracts_player_idx").on(t.playerId)],
+  (t) => [
+    index("contracts_player_idx").on(t.playerId),
+    uniqueIndex("contracts_player_team_source_uq").on(
+      t.playerId,
+      t.teamId,
+      t.sourceId,
+    ),
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -229,6 +239,8 @@ export const matches = pgTable(
       .notNull()
       .references(() => teams.id),
     kickoffAt: tstz("kickoff_at").notNull(),
+    /** false = nur das Datum ist bekannt, die Uhrzeit ist ein Platzhalter. */
+    kickoffTimeKnown: boolean("kickoff_time_known").notNull().default(true),
     status: matchStatus("status").notNull().default("scheduled"),
     homeScore: smallint("home_score"),
     awayScore: smallint("away_score"),
@@ -384,7 +396,12 @@ export const injuries = pgTable(
     ...provenance(),
     ...timestamps(),
   },
-  (t) => [index("injuries_player_idx").on(t.playerId)],
+  (t) => [
+    index("injuries_player_idx").on(t.playerId),
+    unique("injuries_player_source_since_uq")
+      .on(t.playerId, t.sourceId, t.since)
+      .nullsNotDistinct(),
+  ],
 );
 
 export const suspensions = pgTable(
@@ -408,7 +425,12 @@ export const suspensions = pgTable(
     ...provenance(),
     ...timestamps(),
   },
-  (t) => [index("suspensions_player_idx").on(t.playerId)],
+  (t) => [
+    index("suspensions_player_idx").on(t.playerId),
+    unique("suspensions_player_source_trigger_uq")
+      .on(t.playerId, t.sourceId, t.reason, t.triggeredByMatchId)
+      .nullsNotDistinct(),
+  ],
 );
 
 export const cards = pgTable(
@@ -430,6 +452,9 @@ export const cards = pgTable(
   },
   (t) => [
     index("cards_player_competition_idx").on(t.playerId, t.competitionId),
+    unique("cards_match_player_type_minute_uq")
+      .on(t.matchId, t.playerId, t.type, t.minute)
+      .nullsNotDistinct(),
   ],
 );
 
@@ -468,7 +493,13 @@ export const broadcasts = pgTable(
     url: text("url"),
     ...provenance(),
   },
-  (t) => [index("broadcasts_match_idx").on(t.matchId)],
+  (t) => [
+    uniqueIndex("broadcasts_match_country_broadcaster_uq").on(
+      t.matchId,
+      t.country,
+      t.broadcaster,
+    ),
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -561,4 +592,54 @@ export const valueBets = pgTable(
     computedAt: tstz("computed_at").notNull().defaultNow(),
   },
   (t) => [index("value_bets_match_idx").on(t.matchId, t.computedAt)],
+);
+
+// ---------------------------------------------------------------------------
+// Betrieb: Job-Protokoll und Quellenkonflikte
+// ---------------------------------------------------------------------------
+
+export const jobStatus = pgEnum("job_status", [
+  "running",
+  "succeeded",
+  "failed",
+  "skipped",
+]);
+
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: serial("id").primaryKey(),
+    job: text("job").notNull(),
+    status: jobStatus("status").notNull(),
+    startedAt: tstz("started_at").notNull().defaultNow(),
+    finishedAt: tstz("finished_at"),
+    durationMs: integer("duration_ms"),
+    itemsWritten: integer("items_written"),
+    error: text("error"),
+    /** Warnungen, Plausibilitätsbefunde, Quoten-Kontingent usw. */
+    details: jsonb("details").$type<Record<string, unknown>>(),
+  },
+  (t) => [index("job_runs_job_started_idx").on(t.job, t.startedAt)],
+);
+
+export const dataConflicts = pgTable(
+  "data_conflicts",
+  {
+    id: serial("id").primaryKey(),
+    entityType: entityType("entity_type").notNull(),
+    entityId: integer("entity_id").notNull(),
+    field: text("field").notNull(),
+    keptSourceId: integer("kept_source_id")
+      .notNull()
+      .references(() => dataSources.id),
+    keptValue: text("kept_value"),
+    otherSourceId: integer("other_source_id")
+      .notNull()
+      .references(() => dataSources.id),
+    otherValue: text("other_value"),
+    /** true = Abweichung groß genug, um den Wert als „ungesichert“ zu zeigen. */
+    unconfirmed: boolean("unconfirmed").notNull(),
+    detectedAt: tstz("detected_at").notNull().defaultNow(),
+  },
+  (t) => [index("data_conflicts_entity_idx").on(t.entityType, t.entityId)],
 );

@@ -21,7 +21,19 @@ export interface CompetitionConfig {
    * die UI zeigt dann keinen Sperrabstand an, statt einen zu raten.
    */
   yellowCardSuspensionThreshold: number | null;
+  /** Zeitzone, in der Quellen ohne UTC-Angabe die Anstoßzeit liefern. */
+  timezone: string;
+  /** IDs bzw. Schlüssel dieses Wettbewerbs bei den einzelnen Anbietern. */
+  providerIds: {
+    openfootball?: string;
+    footballData?: string;
+    theOddsApi?: string;
+    apiFootball?: number;
+  };
 }
+
+/** Laufende Saison. Wird zum Saisonwechsel hier umgestellt. */
+export const CURRENT_SEASON = { label: "2026/27", startYear: 2026 } as const;
 
 export const COMPETITIONS = [
   {
@@ -31,6 +43,13 @@ export const COMPETITIONS = [
     type: "league",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: 5,
+    timezone: "Europe/Berlin",
+    providerIds: {
+      openfootball: "de.1",
+      footballData: "BL1",
+      theOddsApi: "soccer_germany_bundesliga",
+      apiFootball: 78,
+    },
   },
   {
     code: "PL",
@@ -39,6 +58,13 @@ export const COMPETITIONS = [
     type: "league",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: null,
+    timezone: "Europe/London",
+    providerIds: {
+      openfootball: "en.1",
+      footballData: "PL",
+      theOddsApi: "soccer_epl",
+      apiFootball: 39,
+    },
   },
   {
     code: "SA",
@@ -47,6 +73,13 @@ export const COMPETITIONS = [
     type: "league",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: null,
+    timezone: "Europe/Rome",
+    providerIds: {
+      openfootball: "it.1",
+      footballData: "SA",
+      theOddsApi: "soccer_italy_serie_a",
+      apiFootball: 135,
+    },
   },
   {
     code: "PD",
@@ -55,6 +88,13 @@ export const COMPETITIONS = [
     type: "league",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: null,
+    timezone: "Europe/Madrid",
+    providerIds: {
+      openfootball: "es.1",
+      footballData: "PD",
+      theOddsApi: "soccer_spain_la_liga",
+      apiFootball: 140,
+    },
   },
   {
     code: "FL1",
@@ -63,6 +103,13 @@ export const COMPETITIONS = [
     type: "league",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: null,
+    timezone: "Europe/Paris",
+    providerIds: {
+      openfootball: "fr.1",
+      footballData: "FL1",
+      theOddsApi: "soccer_france_ligue_one",
+      apiFootball: 61,
+    },
   },
   {
     code: "CL",
@@ -71,6 +118,12 @@ export const COMPETITIONS = [
     type: "cup",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: null,
+    timezone: "Europe/Berlin",
+    providerIds: {
+      footballData: "CL",
+      theOddsApi: "soccer_uefa_champs_league",
+      apiFootball: 2,
+    },
   },
   {
     code: "EL",
@@ -79,6 +132,12 @@ export const COMPETITIONS = [
     type: "cup",
     hasMatchPages: true,
     yellowCardSuspensionThreshold: null,
+    timezone: "Europe/Berlin",
+    providerIds: {
+      footballData: "EL",
+      theOddsApi: "soccer_uefa_europa_league",
+      apiFootball: 3,
+    },
   },
 ] as const satisfies readonly CompetitionConfig[];
 

@@ -29,7 +29,7 @@ describe.skipIf(!sql)("odds_snapshots", () => {
           returning id`;
         const [comp] = await tx`
           insert into competitions (code, name, country, type)
-          values ('TEST', 'Test', 'DE', 'league') returning id`;
+          values ('ZZA', 'Test', 'DE', 'league') returning id`;
         const [home, away] = await tx`
           insert into teams (name, source_id, fetched_at)
           values ('Heim', ${source.id}, now()), ('Gast', ${source.id}, now())

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { competitions, matches, teams } from "@/db/schema";
 import { findTeam } from "../team-names";
@@ -6,7 +6,10 @@ import type { MatchRecord, Sourced, TeamRecord } from "../types";
 import {
   type DbLike,
   type SourceInfo,
-  link,
+  chunks,
+  dedupeBy,
+  excludedSet,
+  linkMany,
   loadMappings,
   logConflict,
   requireSource,
@@ -40,6 +43,9 @@ const scoreText = (h: number | null, a: number | null) =>
  * Zuordnung: erst über `external_ids`, dann über Wettbewerb + Saison +
  * Heim/Gast + Anstoß (±4 Tage). Bei bestehenden Spielen gewinnt die Quelle
  * mit der höheren Priorität; abweichende Werte werden als Konflikt geloggt.
+ *
+ * Entschieden wird im Speicher, geschrieben gebündelt: Gegen eine entfernte
+ * Datenbank kostet jede Abfrage eine Netzwerk-Rundreise.
  */
 export async function writeMatches(
   db: DbLike,
@@ -92,6 +98,15 @@ export async function writeMatches(
 
   const teamMap = await loadMappings(db, source.id, "team");
   const matchMap = await loadMappings(db, source.id, "match");
+  const teamLinks: { entityId: number; externalId: string }[] = [];
+  const matchLinks: { entityId: number; externalId: string }[] = [];
+  type MatchValues = typeof matches.$inferInsert & { homeTeamId: number; awayTeamId: number; kickoffAt: Date };
+  const pending: { values: MatchValues; externalIds: string[] }[] = [];
+  const updates: (MatchValues & { id: number })[] = [];
+  const samePairing = (m: { homeTeamId: number; awayTeamId: number; kickoffAt: Date }, v: MatchValues) =>
+    m.homeTeamId === v.homeTeamId &&
+    m.awayTeamId === v.awayTeamId &&
+    Math.abs(m.kickoffAt.getTime() - v.kickoffAt.getTime()) < SAME_MATCH_WINDOW_MS;
 
   const resolveTeam = async (team: TeamRecord, p: Sourced<MatchRecord>["provenance"]) => {
     const mapped = teamMap.get(team.externalId);
@@ -121,7 +136,7 @@ export async function writeMatches(
       id = row!.id;
       teamCandidates.set(id, { id, name: team.name });
     }
-    await link(db, source.id, "team", id, team.externalId);
+    teamLinks.push({ entityId: id, externalId: team.externalId });
     teamMap.set(team.externalId, id);
     return id;
   };
@@ -145,7 +160,7 @@ export async function writeMatches(
 
     const homeTeamId = await resolveTeam(r.homeTeam, r.provenance);
     const awayTeamId = await resolveTeam(r.awayTeam, r.provenance);
-    const values = {
+    const values: MatchValues = {
       competitionId: competition.id,
       season: r.season,
       matchday: r.matchday,
@@ -164,24 +179,24 @@ export async function writeMatches(
 
     let current = matchById.get(matchMap.get(r.externalId) ?? -1);
     if (!current) {
-      current = [...matchById.values()].find(
-        (m) =>
-          m.homeTeamId === homeTeamId &&
-          m.awayTeamId === awayTeamId &&
-          Math.abs(m.kickoffAt.getTime() - r.kickoffAt.getTime()) < SAME_MATCH_WINDOW_MS,
-      );
+      current = [...matchById.values()].find((m) => samePairing(m, values));
       if (current) {
-        await link(db, source.id, "match", current.id, r.externalId);
+        matchLinks.push({ entityId: current.id, externalId: r.externalId });
         matchMap.set(r.externalId, current.id);
       }
     }
 
     if (!current) {
-      const [row] = await db.insert(matches).values(values).returning();
-      await link(db, source.id, "match", row!.id, r.externalId);
-      matchMap.set(r.externalId, row!.id);
-      matchById.set(row!.id, row!);
-      result.inserted++;
+      // Dasselbe Spiel kann im selben Abruf mehrfach vorkommen.
+      const same = pending.find((p) => samePairing(p.values, values));
+      if (same) {
+        same.values = values;
+        same.externalIds.push(r.externalId);
+        result.unchanged++;
+      } else {
+        pending.push({ values, externalIds: [r.externalId] });
+        result.inserted++;
+      }
       continue;
     }
 
@@ -239,15 +254,37 @@ export async function writeMatches(
       current.matchday !== r.matchday ||
       current.sourceId !== source.id;
     // fetched_at wird immer aktualisiert: Es belegt, wann die Quelle zuletzt bestätigt hat.
-    const [row] = await db
-      .update(matches)
-      .set(values)
-      .where(eq(matches.id, current.id))
-      .returning();
-    matchById.set(row!.id, row!);
+    updates.push({ id: current.id, ...values });
+    matchById.set(current.id, { ...current, ...values });
     if (changed) result.updated++;
     else result.unchanged++;
   }
+
+  for (const part of chunks(pending)) {
+    const rows = await db
+      .insert(matches)
+      .values(part.map((p) => p.values))
+      .returning({ id: matches.id, homeTeamId: matches.homeTeamId, awayTeamId: matches.awayTeamId, kickoffAt: matches.kickoffAt });
+    part.forEach((p, i) => {
+      const row = rows[i];
+      // RETURNING liefert die Zeilen in Einfügereihenfolge; zur Sicherheit prüfen.
+      if (!row || row.homeTeamId !== p.values.homeTeamId || row.awayTeamId !== p.values.awayTeamId || row.kickoffAt.getTime() !== p.values.kickoffAt.getTime()) {
+        throw new Error("Zuordnung neuer Spiele fehlgeschlagen (RETURNING-Reihenfolge)");
+      }
+      for (const externalId of p.externalIds) matchLinks.push({ entityId: row.id, externalId });
+    });
+  }
+  for (const part of chunks(dedupeBy(updates, (u) => String(u.id)))) {
+    await db
+      .insert(matches)
+      .values(part)
+      .onConflictDoUpdate({
+        target: matches.id,
+        set: { ...excludedSet(matches, Object.keys(part[0]!).filter((k) => k !== "id")), updatedAt: sql`now()` },
+      });
+  }
+  await linkMany(db, source.id, "team", teamLinks);
+  await linkMany(db, source.id, "match", matchLinks);
 
   if (overdue > 0) {
     result.warnings.push(

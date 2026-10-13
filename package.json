@@ -21,6 +21,7 @@
   "dependencies": {
     "@upstash/redis": "^1.39.0",
     "class-variance-authority": "^0.7.1",
+    "cmdk": "^1.1.1",
     "cn": "^0.4.0",
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.56.0",
@@ -36,6 +37,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",

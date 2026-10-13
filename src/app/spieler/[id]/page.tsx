@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FormCard } from "@/components/form-card";
-import { SeasonChart } from "@/components/season-chart";
+import { SeasonChart } from "@/components/charts-lazy";
 import { SourceFootnote, Sourced } from "@/components/source-note";
 import { StatusBadge, TrafficPill } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,8 +30,11 @@ type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const data = await getPlayerPage(Number(id));
-  return { title: data?.player.name ?? "Spieler" };
+  const data = Number.isInteger(Number(id)) ? await getPlayerPage(Number(id)) : null;
+  return {
+    title: data?.player.name ?? "Spieler",
+    description: data ? `${data.player.name}: Status, Sperrgefahr, Statistik, Form und Vertrag.` : undefined,
+  };
 }
 
 export default async function PlayerPage({ params }: Props) {
@@ -39,7 +42,7 @@ export default async function PlayerPage({ params }: Props) {
   const playerId = Number(id);
   if (!Number.isInteger(playerId)) notFound();
   const now = new Date();
-  const [data, form] = await Promise.all([getPlayerPage(playerId, now), getForm(playerId, now)]);
+  const [data, form] = await Promise.all([getPlayerPage(playerId), getForm(playerId, now)]);
   if (!data) notFound();
 
   const { player, team, injury, suspension, contract, games, mainCompetition } = data;
@@ -82,7 +85,7 @@ export default async function PlayerPage({ params }: Props) {
             </h1>
             <p className="text-muted-foreground">
               {team ? (
-                <Link href={`/teams/${team.id}`} className="underline-offset-4 hover:text-foreground hover:underline">
+                <Link href={`/teams/${team.id}`} className="underline underline-offset-4 hover:text-foreground">
                   {team.name}
                 </Link>
               ) : (
@@ -114,7 +117,7 @@ export default async function PlayerPage({ params }: Props) {
             <CalendarClock className="size-4" aria-hidden />
             Nächstes Spiel: {data.nextMatch.isHome ? "gegen" : "bei"} {data.nextMatch.opponent},{" "}
             {kickoffText(data.nextMatch.kickoffAt, data.nextMatch.kickoffTimeKnown)} ·{" "}
-            <Link href={`/spiele/${data.nextMatch.id}`} className="text-primary underline-offset-4 hover:underline">
+            <Link href={`/spiele/${data.nextMatch.id}`} className="text-primary underline underline-offset-4">
               Zum Spiel
             </Link>
           </p>

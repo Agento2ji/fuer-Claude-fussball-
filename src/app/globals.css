@@ -29,9 +29,11 @@
   --border: oklch(0.9 0.005 250);
   --input: oklch(0.9 0.005 250);
   --ring: oklch(0.52 0.12 160);
-  --status-ok: oklch(0.5 0.13 155);
-  --status-warn: oklch(0.58 0.14 75);
-  --status-danger: oklch(0.55 0.2 27);
+  /* Akzent als Schrift auf getöntem Grund (Badges), WCAG AA */
+  --primary-ink: oklch(0.4 0.1 160);
+  --status-ok: oklch(0.46 0.12 155);
+  --status-warn: oklch(0.47 0.11 65);
+  --status-danger: oklch(0.5 0.19 27);
   --chart-1: oklch(0.52 0.12 160);
   --chart-2: oklch(0.55 0.02 250);
   --chart-3: oklch(0.58 0.14 75);
@@ -59,6 +61,7 @@
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.74 0.14 160);
+  --primary-ink: oklch(0.8 0.13 160);
   --status-ok: oklch(0.76 0.15 155);
   --status-warn: oklch(0.82 0.15 85);
   --status-danger: oklch(0.7 0.18 25);
@@ -91,6 +94,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-primary-ink: var(--primary-ink);
   --color-status-ok: var(--status-ok);
   --color-status-warn: var(--status-warn);
   --color-status-danger: var(--status-danger);

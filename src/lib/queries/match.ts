@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/db";
@@ -9,9 +10,9 @@ import { getAvailability } from "./availability";
 import { getForms } from "./form";
 import { sourceResolver } from "./sources";
 
-export type MatchPageData = NonNullable<Awaited<ReturnType<typeof getMatchPage>>>;
+export type MatchPageData = NonNullable<Awaited<ReturnType<typeof getMatchPageUncached>>>;
 
-export async function getMatchPage(matchId: number) {
+async function getMatchPageUncached(matchId: number) {
   const db = getDb();
   const ref = await sourceResolver();
   const home = alias(teams, "home");
@@ -176,3 +177,6 @@ export async function upcomingMatches(now: Date, limit = 8) {
     .orderBy(asc(competitions.isTestData), asc(matches.kickoffAt))
     .limit(limit);
 }
+
+/** Je Anfrage nur einmal geladen – Seite und Metadaten teilen sich das Ergebnis. */
+export const getMatchPage = cache(getMatchPageUncached);

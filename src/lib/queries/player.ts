@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { CURRENT_SEASON } from "@/config/competitions";
@@ -32,9 +33,9 @@ export async function listPlayers() {
     .orderBy(asc(teams.name), asc(players.shirtNumber));
 }
 
-export type PlayerPageData = NonNullable<Awaited<ReturnType<typeof getPlayerPage>>>;
+export type PlayerPageData = NonNullable<Awaited<ReturnType<typeof getPlayerPageUncached>>>;
 
-export async function getPlayerPage(playerId: number, now: Date = new Date()) {
+async function getPlayerPageUncached(playerId: number, now: Date = new Date()) {
   const db = getDb();
   const ref = await sourceResolver();
 
@@ -205,3 +206,6 @@ export async function getPlayerPage(playerId: number, now: Date = new Date()) {
       : null,
   };
 }
+
+/** Je Anfrage nur einmal geladen – Seite und Metadaten teilen sich das Ergebnis. */
+export const getPlayerPage = cache(getPlayerPageUncached);

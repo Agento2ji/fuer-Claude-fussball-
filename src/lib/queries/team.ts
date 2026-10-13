@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { CURRENT_SEASON } from "@/config/competitions";
@@ -8,9 +9,9 @@ import { computeStandings } from "@/lib/standings";
 import { getAvailability } from "./availability";
 import { sourceResolver } from "./sources";
 
-export type TeamPageData = NonNullable<Awaited<ReturnType<typeof getTeamPage>>>;
+export type TeamPageData = NonNullable<Awaited<ReturnType<typeof getTeamPageUncached>>>;
 
-export async function getTeamPage(teamId: number, now: Date = new Date()) {
+async function getTeamPageUncached(teamId: number, now: Date = new Date()) {
   const db = getDb();
   const [team] = await db.select().from(teams).where(eq(teams.id, teamId));
   if (!team) return null;
@@ -111,3 +112,6 @@ export async function getTeamPage(teamId: number, now: Date = new Date()) {
     atRisk,
   };
 }
+
+/** Je Anfrage nur einmal geladen – Seite und Metadaten teilen sich das Ergebnis. */
+export const getTeamPage = cache(getTeamPageUncached);

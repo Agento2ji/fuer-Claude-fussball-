@@ -1,5 +1,6 @@
 import { CalendarClock, FileSignature, FlaskConical, Newspaper, Shirt } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SeasonChart } from "@/components/season-chart";
 import { SourceFootnote, Sourced } from "@/components/source-note";
@@ -16,17 +17,11 @@ import {
 } from "@/lib/player-status";
 import { getPlayerPage, type PlayerPageData } from "@/lib/queries/player";
 import { formatBerlin } from "@/lib/time";
+import { dateLong, dateShort, de1, de2, eur, kickoffText, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const de1 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const de2 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const pct = new Intl.NumberFormat("de-DE", { style: "percent", maximumFractionDigits: 0 });
-const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", notation: "compact", maximumFractionDigits: 1 });
-const dateShort = (d: Date) => formatBerlin(d, { day: "2-digit", month: "2-digit" });
-const dateLong = (d: Date | string) =>
-  formatBerlin(typeof d === "string" ? new Date(`${d}T12:00:00Z`) : d, { dateStyle: "medium" });
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -83,7 +78,13 @@ export default async function PlayerPage({ params }: Props) {
               {player.name}
             </h1>
             <p className="text-muted-foreground">
-              {team?.name ?? "Vereinslos"}
+              {team ? (
+                <Link href={`/teams/${team.id}`} className="underline-offset-4 hover:text-foreground hover:underline">
+                  {team.name}
+                </Link>
+              ) : (
+                "Vereinslos"
+              )}
               {player.detailedPosition && ` · ${player.detailedPosition}`}
               {player.birthDate && ` · ${age(player.birthDate, now)} Jahre`}
             </p>
@@ -109,9 +110,7 @@ export default async function PlayerPage({ params }: Props) {
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarClock className="size-4" aria-hidden />
             Nächstes Spiel: {data.nextMatch.isHome ? "gegen" : "bei"} {data.nextMatch.opponent},{" "}
-            {data.nextMatch.kickoffTimeKnown
-              ? formatBerlin(data.nextMatch.kickoffAt, { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-              : `${dateLong(data.nextMatch.kickoffAt)}, Uhrzeit offen`}
+            {kickoffText(data.nextMatch.kickoffAt, data.nextMatch.kickoffTimeKnown)}
           </p>
         )}
       </section>

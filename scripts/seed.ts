@@ -7,7 +7,7 @@ import { config } from "dotenv";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { BOOKMAKERS } from "../src/config/bookmakers";
+import { BOOKMAKERS, type GglPermission } from "../src/config/bookmakers";
 import { COMPETITIONS } from "../src/config/competitions";
 import { DATA_SOURCES } from "../src/config/data-sources";
 import { bookmakers, competitions, dataSources } from "../src/db/schema";
@@ -65,12 +65,14 @@ async function main() {
       }
 
       for (const b of BOOKMAKERS) {
+        const ggl: GglPermission | null = b.ggl;
         const values = {
           key: b.key,
           name: b.name,
           showInComparison: b.showInComparison,
           useForFairPrice: b.useForFairPrice,
-          gglLicenseVerified: b.gglLicenseVerified,
+          gglLicenseVerified: ggl !== null,
+          gglLicenseNumber: ggl ? `${ggl.operator}, Erlaubnis vom ${ggl.followUpPermission ?? ggl.firstPermission}` : null,
         };
         await tx
           .insert(bookmakers)

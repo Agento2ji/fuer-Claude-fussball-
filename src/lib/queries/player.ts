@@ -2,11 +2,11 @@ import "server-only";
 import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/db";
+import { sourceResolver } from "./sources";
 import {
   cards,
   competitions,
   contracts,
-  dataSources,
   injuries,
   matches,
   playerMatchStats,
@@ -14,22 +14,6 @@ import {
   suspensions,
   teams,
 } from "@/db/schema";
-
-/** Herkunft eines angezeigten Werts, für den Quellenhinweis in der UI. */
-export interface SourceRef {
-  name: string;
-  key: string;
-  fetchedAt: Date;
-  url: string | null;
-  isTestData: boolean;
-}
-
-async function sourceMap(): Promise<Map<number, Omit<SourceRef, "fetchedAt" | "url">>> {
-  const rows = await getDb()
-    .select({ id: dataSources.id, key: dataSources.key, name: dataSources.name, kind: dataSources.kind })
-    .from(dataSources);
-  return new Map(rows.map((r) => [r.id, { key: r.key, name: r.name, isTestData: r.kind === "testdaten" }]));
-}
 
 export async function listPlayers() {
   const db = getDb();
@@ -51,12 +35,7 @@ export type PlayerPageData = NonNullable<Awaited<ReturnType<typeof getPlayerPage
 
 export async function getPlayerPage(playerId: number, now: Date = new Date()) {
   const db = getDb();
-  const sources = await sourceMap();
-  const ref = (sourceId: number, fetchedAt: Date, url: string | null): SourceRef => ({
-    ...(sources.get(sourceId) ?? { key: "unbekannt", name: "Unbekannte Quelle", isTestData: false }),
-    fetchedAt,
-    url,
-  });
+  const ref = await sourceResolver();
 
   const [p] = await db
     .select({ player: players, team: teams })

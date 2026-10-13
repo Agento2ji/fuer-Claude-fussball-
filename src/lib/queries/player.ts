@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { CURRENT_SEASON } from "@/config/competitions";
 import { getDb } from "@/db";
 import { sourceResolver } from "./sources";
 import {
@@ -70,6 +71,7 @@ export async function getPlayerPage(playerId: number, now: Date = new Date()) {
     return {
       matchId: r.match.id,
       kickoffAt: r.match.kickoffAt,
+      season: r.match.season,
       competition: r.competition,
       opponent: isHome ? r.awayName : r.homeName,
       isHome,
@@ -144,7 +146,8 @@ export async function getPlayerPage(playerId: number, now: Date = new Date()) {
     })
     .from(cards)
     .innerJoin(competitions, eq(competitions.id, cards.competitionId))
-    .where(and(eq(cards.playerId, playerId), eq(cards.type, "yellow")))
+    .innerJoin(matches, eq(matches.id, cards.matchId))
+    .where(and(eq(cards.playerId, playerId), eq(cards.type, "yellow"), eq(matches.season, CURRENT_SEASON.label)))
     .groupBy(cards.competitionId, competitions.name, competitions.yellowCardSuspensionThreshold);
 
   const [contract] = await db

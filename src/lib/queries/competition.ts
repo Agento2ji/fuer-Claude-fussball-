@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { CURRENT_SEASON } from "@/config/competitions";
 import { getDb } from "@/db";
 import { competitions, matches, teams } from "@/db/schema";
 import { computeStandings } from "@/lib/standings";
@@ -15,7 +16,7 @@ export async function listCompetitionsWithData() {
       matches: sql<number>`count(${matches.id})::int`,
     })
     .from(competitions)
-    .leftJoin(matches, eq(matches.competitionId, competitions.id))
+    .leftJoin(matches, and(eq(matches.competitionId, competitions.id), eq(matches.season, CURRENT_SEASON.label)))
     .groupBy(competitions.id)
     .orderBy(asc(competitions.isTestData), asc(competitions.id));
 }
@@ -31,7 +32,7 @@ export async function getCompetitionPage(code: string, now: Date = new Date()) {
   const rows = await db
     .select({ m: matches })
     .from(matches)
-    .where(eq(matches.competitionId, competition.id))
+    .where(and(eq(matches.competitionId, competition.id), eq(matches.season, CURRENT_SEASON.label)))
     .orderBy(asc(matches.kickoffAt));
 
   const teamIds = [...new Set(rows.flatMap((r) => [r.m.homeTeamId, r.m.awayTeamId]))];
@@ -85,7 +86,7 @@ export async function latestResultDates() {
     .select({ code: competitions.code, last: sql<Date>`max(${matches.kickoffAt})` })
     .from(matches)
     .innerJoin(competitions, eq(competitions.id, matches.competitionId))
-    .where(and(isNotNull(matches.homeScore), isNotNull(matches.awayScore)))
+    .where(and(isNotNull(matches.homeScore), isNotNull(matches.awayScore), eq(matches.season, CURRENT_SEASON.label)))
     .groupBy(competitions.code)
     .orderBy(desc(competitions.code));
   return new Map(rows.map((r) => [r.code, new Date(r.last)]));

@@ -4,7 +4,7 @@ test("Startseite führt über Tabelle und Team zur Spielerseite", async ({ page 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Fußball-Hub", level: 1 })).toBeVisible();
 
-  await page.getByRole("link", { name: /Testliga/ }).click();
+  await page.locator("main a[href='/wettbewerbe/TEST']").click();
   await expect(page.getByRole("heading", { name: /Testliga/, level: 1 })).toBeVisible();
   const rows = page.getByRole("table").getByRole("row");
   await expect(rows).toHaveCount(7); // Kopfzeile + 6 Vereine
@@ -51,4 +51,14 @@ test("Formbewertung zeigt Stufe, Perzentil und Erklärung", async ({ page }) => 
   await expect(card).toContainText("Perzentil der Karriere");
   await card.getByRole("button", { name: /Wie entsteht das/ }).click();
   await expect(page.getByRole("dialog")).toContainText("Standardabweichungen");
+});
+
+test("Spielseite zeigt Countdown, Sender, Aufstellungen und direkten Vergleich", async ({ page }) => {
+  await page.goto("/wettbewerbe/TEST");
+  await page.locator("main a[href^='/spiele/']").first().click();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await expect(page.getByText("Übertragung in Deutschland")).toBeVisible();
+  await expect(page.getByText("Voraussichtliche Aufstellung").first()).toBeVisible();
+  await expect(page.getByText("Direkter Vergleich")).toBeVisible();
+  await expect(page.getByText(/erfasste Duelle?/)).toBeVisible();
 });

@@ -37,9 +37,10 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 
 | Pfad | Inhalt |
 | --- | --- |
-| `/` | Wettbewerbe mit Datenstand |
+| `/` | Nächste Spiele und Wettbewerbe mit Datenstand |
 | `/wettbewerbe/[code]` | Tabelle (aus Ergebnissen berechnet) und nächste Spiele |
 | `/teams/[id]` | Platz, Punkte, Form, nächstes Spiel, Ausfälle, Teamstatistik, Kader |
+| `/spiele/[id]` | Paarung, Countdown, Übertragung, Form, Ausfälle, Aufstellungen mit Form, direkter Vergleich |
 | `/spieler` und `/spieler/[id]` | Kaderliste und Spielerseite mit Status, Sperrgefahr, Statistik, Vertrag |
 
 Jede angezeigte Zahl ist antippbar und zeigt Quelle und Abrufzeitpunkt.
@@ -102,6 +103,10 @@ Vorgabe: zunächst 0 € Budget. Stand der Recherche: 13.10.2026.
 | uefa.com, dfl.de | Champions/Europa League, Mitteilungen | – | – | robots.txt nicht abrufbar | offen |
 
 Scraper werden erst gebaut, wenn die Nutzungsbedingungen geprüft sind.
+
+Übertragung: Sender werden nur aus geprüften Quellen angezeigt. Eine
+Ableitung aus Sendeplatz-Regeln der Rechtevergabe ist bewusst nicht
+eingebaut, weil sie sich je Spiel nicht verlässlich belegen lässt.
 
 ### Buchmacher
 

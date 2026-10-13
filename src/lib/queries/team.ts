@@ -1,20 +1,11 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { CURRENT_SEASON } from "@/config/competitions";
 import { getDb } from "@/db";
-import {
-  cards,
-  competitions,
-  injuries,
-  matches,
-  players,
-  suspensions,
-  teamMatchStats,
-  teams,
-} from "@/db/schema";
-import { yellowCardRisk } from "@/lib/player-status";
+import { competitions, matches, teamMatchStats, teams } from "@/db/schema";
 import { computeStandings } from "@/lib/standings";
+import { getAvailability } from "./availability";
 import { sourceResolver } from "./sources";
 
 export type TeamPageData = NonNullable<Awaited<ReturnType<typeof getTeamPage>>>;
@@ -104,59 +95,7 @@ export async function getTeamPage(teamId: number, now: Date = new Date()) {
     source: ref(r.s.sourceId, r.s.fetchedAt, r.s.sourceUrl),
   }));
 
-  // Kader mit Verfügbarkeit.
-  const squad = await db
-    .select({ id: players.id, name: players.name, position: players.position, shirtNumber: players.shirtNumber })
-    .from(players)
-    .where(eq(players.currentTeamId, teamId))
-    .orderBy(asc(players.shirtNumber));
-  const squadIds = squad.map((p) => p.id);
-
-  const activeInjuries = squadIds.length
-    ? await db.select().from(injuries).where(and(inArray(injuries.playerId, squadIds), isNull(injuries.endedAt)))
-    : [];
-  const activeSuspensions = squadIds.length
-    ? await db
-        .select({ s: suspensions, competitionName: competitions.name })
-        .from(suspensions)
-        .leftJoin(competitions, eq(competitions.id, suspensions.competitionId))
-        .where(and(inArray(suspensions.playerId, squadIds), eq(suspensions.active, true)))
-    : [];
-  const yellow = squadIds.length
-    ? await db
-        .select({
-          playerId: cards.playerId,
-          competitionName: competitions.name,
-          threshold: competitions.yellowCardSuspensionThreshold,
-          count: sql<number>`count(*)::int`,
-        })
-        .from(cards)
-        .innerJoin(competitions, eq(competitions.id, cards.competitionId))
-        .innerJoin(matches, eq(matches.id, cards.matchId))
-        .where(and(inArray(cards.playerId, squadIds), eq(cards.type, "yellow"), eq(matches.season, CURRENT_SEASON.label)))
-        .groupBy(cards.playerId, competitions.name, competitions.yellowCardSuspensionThreshold)
-    : [];
-
-  const byId = new Map(squad.map((p) => [p.id, p]));
-  const absences = [
-    ...activeSuspensions.map((x) => ({
-      player: byId.get(x.s.playerId)!,
-      kind: "gesperrt" as const,
-      detail: `${x.s.matchesCount} ${x.s.matchesCount === 1 ? "Spiel" : "Spiele"}${x.competitionName ? ` · ${x.competitionName}` : ""}`,
-      expectedReturn: null as string | null,
-      source: ref(x.s.sourceId, x.s.fetchedAt, x.s.sourceUrl),
-    })),
-    ...activeInjuries.map((i) => ({
-      player: byId.get(i.playerId)!,
-      kind: i.status === "injured" ? ("verletzt" as const) : ("angeschlagen" as const),
-      detail: i.injuryType ?? "",
-      expectedReturn: i.expectedReturn,
-      source: ref(i.sourceId, i.fetchedAt, i.sourceUrl),
-    })),
-  ];
-  const atRisk = yellow
-    .filter((y) => yellowCardRisk(y.count, y.threshold).atRisk)
-    .map((y) => ({ player: byId.get(y.playerId)!, count: y.count, competitionName: y.competitionName }));
+  const { squad, absences, atRisk } = await getAvailability(teamId);
 
   return {
     team,

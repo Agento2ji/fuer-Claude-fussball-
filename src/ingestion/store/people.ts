@@ -10,6 +10,7 @@ import {
   competitions,
   contracts,
   injuries,
+  lineups,
   playerMatchStats,
   players,
   suspensions,
@@ -19,6 +20,7 @@ import type {
   BroadcastRecord,
   ContractRecord,
   InjuryRecord,
+  LineupRecord,
   PlayerMatchStatsRecord,
   PlayerRecord,
   Sourced,
@@ -304,4 +306,47 @@ export async function writeTeamMatchStats(
     written++;
   }
   return written;
+}
+
+/**
+ * Aufstellungen je Spiel und Team ersetzen: Eine neue Meldung (z. B. die
+ * bestätigte statt der voraussichtlichen) gilt vollständig, alte Einträge
+ * derselben Quelle und Art fallen weg.
+ */
+export async function writeLineups(
+  db: DbLike,
+  sources: Map<string, SourceInfo>,
+  records: Sourced<LineupRecord>[],
+): Promise<number> {
+  if (records.length === 0) return 0;
+  const source = requireSource(sources, records[0]!.provenance.source);
+  const matchMap = await loadMappings(db, source.id, "match");
+  const teamMap = await loadMappings(db, source.id, "team");
+  const playerMap = await loadMappings(db, source.id, "player");
+  const rows: (typeof lineups.$inferInsert)[] = [];
+  const groups = new Set<string>();
+  for (const r of records) {
+    const matchId = need(matchMap, r.matchExternalId, "Spiel");
+    const teamId = need(teamMap, r.teamExternalId, "Team");
+    const playerId = need(playerMap, r.playerExternalId, "Spieler");
+    if (matchId === undefined || teamId === undefined || playerId === undefined) continue;
+    groups.add(`${matchId}|${teamId}|${r.isProbable}`);
+    const { matchExternalId, teamExternalId, playerExternalId, provenance, ...rest } = r;
+    rows.push({ ...rest, matchId, teamId, playerId, ...provenanceValues(source.id, r) });
+  }
+  for (const g of groups) {
+    const [matchId, teamId, probable] = g.split("|");
+    await db
+      .delete(lineups)
+      .where(
+        and(
+          eq(lineups.matchId, Number(matchId)),
+          eq(lineups.teamId, Number(teamId)),
+          eq(lineups.isProbable, probable === "true"),
+          eq(lineups.sourceId, source.id),
+        ),
+      );
+  }
+  for (let i = 0; i < rows.length; i += 500) await db.insert(lineups).values(rows.slice(i, i + 500));
+  return rows.length;
 }

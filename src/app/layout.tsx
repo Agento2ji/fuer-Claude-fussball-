@@ -47,6 +47,9 @@ export default function RootLayout({
                 <Link href="/spieler" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
                   Spieler
                 </Link>
+                <Link href="/quoten" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
+                  Quoten
+                </Link>
                 <ThemeToggle />
               </nav>
             </div>

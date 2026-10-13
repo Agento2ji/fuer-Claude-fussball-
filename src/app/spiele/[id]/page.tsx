@@ -77,6 +77,16 @@ export default async function MatchPage({ params }: Props) {
 
       <BroadcastCard data={data} />
 
+      {!finished && (
+        <Link href={`/spiele/${match.id}/quoten`} className="flex items-center justify-between rounded-xl border bg-card px-4 py-3 text-sm hover:bg-muted/50">
+          <span>
+            <span className="block font-medium">Quotenvergleich</span>
+            <span className="block text-xs text-muted-foreground">Ab 18 · Tipico und Winamax im Vergleich</span>
+          </span>
+          <span aria-hidden>›</span>
+        </Link>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Form</CardTitle>

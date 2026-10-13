@@ -40,6 +40,7 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 | `/` | Nächste Spiele und Wettbewerbe mit Datenstand |
 | `/wettbewerbe/[code]` | Tabelle (aus Ergebnissen berechnet) und nächste Spiele |
 | `/teams/[id]` | Platz, Punkte, Form, nächstes Spiel, Ausfälle, Teamstatistik, Kader |
+| `/quoten`, `/spiele/[id]/quoten` | Quotenübersicht und Vergleich je Spiel (ab 18) |
 | `/spiele/[id]` | Paarung, Countdown, Übertragung, Form, Ausfälle, Aufstellungen mit Form, direkter Vergleich |
 | `/spieler` und `/spieler/[id]` | Kaderliste und Spielerseite mit Status, Sperrgefahr, Statistik, Vertrag |
 
@@ -110,11 +111,28 @@ eingebaut, weil sie sich je Spiel nicht verlässlich belegen lässt.
 
 ### Buchmacher
 
-Verglichen werden nur Tipico und Winamax. Pinnacle dient ausschließlich als
-Referenz für die faire Quote und wird nie als beste Quote angezeigt oder
-verlinkt, weil nach aktuellem Kenntnisstand keine deutsche Erlaubnis
-vorliegt. Die GGL-Whitelist ist für alle drei noch zu prüfen
-(`gglLicenseVerified` in `src/config/bookmakers.ts`).
+Verglichen werden Tipico und Winamax. Beide haben eine deutsche Erlaubnis für
+Sportwetten (GGL-Whitelist, geprüft am 13.10.2026: Tipico Co. Limited seit
+09.10.2020, WINAMAX SA seit 29.06.2021). Pinnacle steht nicht auf der
+Whitelist und dient nur als Referenz für die faire Quote – nie angezeigt,
+nie verlinkt. Die GGL veröffentlicht keine Erlaubnisnummern.
+
+## Quoten und Value
+
+Code in `src/lib/odds/`, Parameter in `src/config/value.ts`:
+
+1. Marge je Anbieter entfernen: Power (Hauptmethode), proportional und Shin zum Vergleich.
+2. Faire Wahrscheinlichkeit = Konsens aller Anbieter, gewichtet mit 1 / Marge.
+3. EV = faire Wahrscheinlichkeit × beste Quote eines zugelassenen Anbieters − 1.
+4. Kelly f = (p·q − 1) / (q − 1), angezeigt wird ein Viertel.
+5. Nur EV ≥ 2 %; Top 3 nach EV je Schwankung der Auszahlung.
+6. Quoten älter als 15 Minuten werden als veraltet gekennzeichnet.
+
+Jugendschutz und Spielerschutz (Abschnitt 8): Altersabfrage (18+) serverseitig
+vor jedem Quotenbereich, dauerhafter Hinweis auf die Beratung des BIÖG
+(früher BZgA, 0800 1 37 27 00, check-dein-spiel.de), keine Affiliate-Links,
+nüchterne Sprache ohne Tipps oder Gewinnversprechen. Impressum, Datenschutz
+und Cookie-Banner fehlen noch – die Seite läuft nur lokal.
 
 ## Testdaten
 

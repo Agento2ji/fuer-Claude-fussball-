@@ -15,7 +15,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "lokal": "npm run db:up && npm run db:migrate && npm run db:seed && next dev",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx scripts/ingest.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@upstash/redis": "^1.39.0",

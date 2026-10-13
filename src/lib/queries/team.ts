@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { CURRENT_SEASON } from "@/config/competitions";
 import { getDb } from "@/db";
 import {
   cards,
@@ -70,7 +71,7 @@ export async function getTeamPage(teamId: number, now: Date = new Date()) {
     const compMatches = await db
       .select({ homeTeamId: matches.homeTeamId, awayTeamId: matches.awayTeamId, homeScore: matches.homeScore, awayScore: matches.awayScore, kickoffAt: matches.kickoffAt })
       .from(matches)
-      .where(eq(matches.competitionId, mainCompId));
+      .where(and(eq(matches.competitionId, mainCompId), eq(matches.season, CURRENT_SEASON.label)));
     const ids = [...new Set(compMatches.flatMap((m) => [m.homeTeamId, m.awayTeamId]))];
     const names = new Map(
       (await db.select({ id: teams.id, name: teams.name }).from(teams).where(inArray(teams.id, ids))).map((t) => [t.id, t.name]),
@@ -93,7 +94,7 @@ export async function getTeamPage(teamId: number, now: Date = new Date()) {
     .select({ s: teamMatchStats, kickoffAt: matches.kickoffAt, matchId: matches.id })
     .from(teamMatchStats)
     .innerJoin(matches, eq(matches.id, teamMatchStats.matchId))
-    .where(eq(teamMatchStats.teamId, teamId))
+    .where(and(eq(teamMatchStats.teamId, teamId), eq(matches.season, CURRENT_SEASON.label)))
     .orderBy(desc(matches.kickoffAt));
   const opponentByMatch = new Map(view.map((v) => [v.id, v.opponent.name]));
   const stats = statRows.map((r) => ({
@@ -131,7 +132,8 @@ export async function getTeamPage(teamId: number, now: Date = new Date()) {
         })
         .from(cards)
         .innerJoin(competitions, eq(competitions.id, cards.competitionId))
-        .where(and(inArray(cards.playerId, squadIds), eq(cards.type, "yellow")))
+        .innerJoin(matches, eq(matches.id, cards.matchId))
+        .where(and(inArray(cards.playerId, squadIds), eq(cards.type, "yellow"), eq(matches.season, CURRENT_SEASON.label)))
         .groupBy(cards.playerId, competitions.name, competitions.yellowCardSuspensionThreshold)
     : [];
 

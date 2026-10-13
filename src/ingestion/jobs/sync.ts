@@ -93,7 +93,18 @@ export async function syncTestdaten(db: DbLike, now: Date = new Date()): Promise
         set: { name: TEST_COMPETITION.name, isTestData: true, updatedAt: sql`now()` },
       });
     const code = TEST_COMPETITION.code;
-    const m = await writeMatches(tx, sources, await provider.getMatches(), now);
+    // Saisonweise schreiben: writeMatches ordnet je Aufruf genau eine Saison zu.
+    const bySeason = new Map<string, Awaited<ReturnType<typeof provider.getMatches>>>();
+    for (const match of await provider.getMatches()) {
+      bySeason.set(match.season, [...(bySeason.get(match.season) ?? []), match]);
+    }
+    const m = { inserted: 0, updated: 0, unchanged: 0 };
+    for (const records of bySeason.values()) {
+      const res = await writeMatches(tx, sources, records, now);
+      m.inserted += res.inserted;
+      m.updated += res.updated;
+      m.unchanged += res.unchanged;
+    }
     let players = 0;
     let contracts = 0;
     for (const team of provider.teams()) {

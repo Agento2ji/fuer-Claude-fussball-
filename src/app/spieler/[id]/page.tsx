@@ -2,6 +2,7 @@ import { CalendarClock, FileSignature, FlaskConical, Newspaper, Shirt } from "lu
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FormCard } from "@/components/form-card";
 import { SeasonChart } from "@/components/season-chart";
 import { SourceFootnote, Sourced } from "@/components/source-note";
 import { StatusBadge, TrafficPill } from "@/components/status-badge";
@@ -15,6 +16,8 @@ import {
   summarize,
   yellowCardRisk,
 } from "@/lib/player-status";
+import { CURRENT_SEASON } from "@/config/competitions";
+import { getForm } from "@/lib/queries/form";
 import { getPlayerPage, type PlayerPageData } from "@/lib/queries/player";
 import { formatBerlin } from "@/lib/time";
 import { dateLong, dateShort, de1, de2, eur, kickoffText, pct } from "@/lib/format";
@@ -36,7 +39,7 @@ export default async function PlayerPage({ params }: Props) {
   const playerId = Number(id);
   if (!Number.isInteger(playerId)) notFound();
   const now = new Date();
-  const data = await getPlayerPage(playerId, now);
+  const [data, form] = await Promise.all([getPlayerPage(playerId, now), getForm(playerId, now)]);
   if (!data) notFound();
 
   const { player, team, injury, suspension, contract, games, mainCompetition } = data;
@@ -119,7 +122,7 @@ export default async function PlayerPage({ params }: Props) {
       {suspension && <SuspensionCard suspension={suspension} />}
       {data.yellowCards.length > 0 && <YellowCardsCard yellowCards={data.yellowCards} />}
 
-      <FormCard />
+      <FormCard form={form} />
 
       {last3.length > 0 && (
         <Card>
@@ -158,10 +161,10 @@ export default async function PlayerPage({ params }: Props) {
         </Card>
       )}
 
-      {games.length > 1 && (
+      {games.filter((g) => g.season === CURRENT_SEASON.label).length > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Saisonverlauf</CardTitle>
+            <CardTitle>Saisonverlauf {CURRENT_SEASON.label}</CardTitle>
             <p className="text-sm text-muted-foreground">
               <span className="mr-1 inline-block size-2 rounded-sm bg-chart-2 align-middle" aria-hidden />
               Note je Spiel
@@ -171,7 +174,7 @@ export default async function PlayerPage({ params }: Props) {
           </CardHeader>
           <CardContent>
             <SeasonChart
-              points={[...games].reverse().map((g) => ({
+              points={[...games].filter((g) => g.season === CURRENT_SEASON.label).reverse().map((g) => ({
                 label: dateShort(g.kickoffAt),
                 opponent: g.opponent,
                 rating: g.stats.rating,
@@ -302,23 +305,6 @@ function YellowCardsCard({ yellowCards }: { yellowCards: PlayerPageData["yellowC
             </div>
           );
         })}
-      </CardContent>
-    </Card>
-  );
-}
-
-function FormCard() {
-  return (
-    <Card className="border-dashed">
-      <CardHeader>
-        <CardTitle>Formbewertung</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">
-          Entwurf: Die Berechnung nach Abschnitt 5 (Perzentil gegen die eigene Karriere) folgt in
-          Meilenstein 4. Hier steht dann die Stufe mit Perzentil, Spielanzahl und den zwei
-          stärksten Einflussgrößen.
-        </p>
       </CardContent>
     </Card>
   );

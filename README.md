@@ -45,6 +45,23 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 Jede angezeigte Zahl ist antippbar und zeigt Quelle und Abrufzeitpunkt.
 Testdaten sind auf jeder Seite deutlich gekennzeichnet.
 
+## Formbewertung
+
+Nachvollziehbar gerechnet nach Abschnitt 5 der Vorgabe, Code in
+`src/lib/form.ts`, alle Schwellen und Gewichte in `src/config/form.ts`:
+
+1. Kennzahlen je Spiel auf 90 Minuten normiert, positionsabhängig gewichtet.
+2. z-Werte gegen dieselbe Position im selben Wettbewerb und derselben Saison,
+   plus Ligastärke als Verschiebung.
+3. Aktuelle Form = Mittel der letzten 5 Pflichtspiele mit ≥ 30 Minuten
+   (mindestens 3, aus den letzten 120 Tagen).
+4. Perzentil gegen alle gleich langen Abschnitte der erfassten Karriere:
+   unter 25 schlecht, 25–60 mittel, 60–90 gut, über 90 Bestform.
+
+Annahmen, die nicht aus der Vorgabe stammen (Gewichte für Mittelfeld und
+Torhüter, Ligastärken, 120-Tage-Grenze, Hinweis bei unter 20 Abschnitten),
+sind in der Konfiguration mit `ANNAHME` markiert.
+
 ## Aufbau
 
 Drei Schichten, strikt getrennt: Ingestion holt und normalisiert, die
@@ -97,7 +114,8 @@ vorliegt. Die GGL-Whitelist ist für alle drei noch zu prüfen
 ## Testdaten
 
 `npm run ingest -- testdaten` spielt eine erfundene „Testliga“ ein: 6 fiktive
-Vereine, 108 fiktive Spieler, 30 Spiele mit Statistik, Verletzungen, Sperren,
+Vereine, 108 fiktive Spieler, die laufende Saison plus drei Vorsaisons (für
+den Karrierevergleich der Formbewertung) mit Statistik, Verletzungen, Sperren,
 Verträgen, Übertragungen und Quoten. Bewusst keine echten Namen – eine
 erfundene Verletzung eines echten Spielers wäre eine Falschinformation.
 

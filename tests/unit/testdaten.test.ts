@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CURRENT_SEASON } from "@/config/competitions";
 import { buildTestWorld } from "@/ingestion/providers/testdaten";
 
 const now = new Date("2026-10-13T12:00:00Z");
@@ -9,15 +10,25 @@ describe("Testdaten", () => {
     expect(buildTestWorld(now)).toEqual(world);
   });
 
-  it("bilden eine vollständige Doppelrunde", () => {
+  const current = world.matches.filter((m) => m.season === CURRENT_SEASON.label);
+
+  it("bilden je Saison eine vollständige Doppelrunde", () => {
     expect(world.teams).toHaveLength(6);
-    expect(world.matches).toHaveLength(30);
-    const pairs = new Set(world.matches.map((m) => `${m.homeTeam.externalId}-${m.awayTeam.externalId}`));
+    expect(current).toHaveLength(30);
+    const pairs = new Set(current.map((m) => `${m.homeTeam.externalId}-${m.awayTeam.externalId}`));
     expect(pairs.size).toBe(30);
+    expect(world.matches).toHaveLength(4 * 30);
+  });
+
+  it("geben jungen Spielern eine kürzere Karriere", () => {
+    const appearances = (pid: string) => new Set(world.stats.filter((s) => s.playerExternalId === pid).map((s) => s.matchExternalId.split("-m")[0])).size;
+    const young = world.players.find((p) => Number(p.birthDate!.slice(0, 4)) >= 2007)!;
+    const veteran = world.players.find((p) => Number(p.birthDate!.slice(0, 4)) <= 2000 && p.position === "forward")!;
+    expect(appearances(young.externalId)).toBeLessThan(appearances(veteran.externalId));
   });
 
   it("haben gespielte Partien in der Vergangenheit, offene in der Zukunft", () => {
-    for (const m of world.matches) {
+    for (const m of current) {
       if (m.status === "finished") expect(m.kickoffAt < now).toBe(true);
       else expect(m.kickoffAt > now).toBe(true);
     }

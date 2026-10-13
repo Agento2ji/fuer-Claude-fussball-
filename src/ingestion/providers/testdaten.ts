@@ -170,7 +170,7 @@ function lastSaturday(now: Date): Date {
   return d;
 }
 
-export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
+export function buildTestWorld(now: Date, playedMatchdays = 7, historySeasons = 3): TestWorld {
   const r = rng("testwelt");
   const teams: TeamRecord[] = TEAMS.map((t, i) => ({
     externalId: `test-t${i + 1}`,
@@ -210,8 +210,16 @@ export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
     return squad;
   });
 
-  // Spielplan: die ersten `playedMatchdays` Spieltage liegen in der Vergangenheit.
+  // Formfaktoren der laufenden Saison: ein Stürmer in Bestform, einer im Formtief.
+  const hot = squads[0]![15]!.externalId;
+  const cold = squads[2]![14]!.externalId;
+  const currentBoost = (p: PlayerRecord) => (p.externalId === hot ? 1.7 : p.externalId === cold ? 0.45 : 1);
+
+  // Vorsaisons, damit die Formbewertung eine Karriere zum Vergleich hat.
+  // Spieler unter 21 haben keine Vorsaisons (kurze Karriere, siehe Hinweis in der UI).
   const schedule = roundRobin(teams.length);
+  const history = buildHistory(teams, squads, schedule, now, historySeasons);
+
   const firstKickoff = addDays(lastSaturday(now), -7 * (playedMatchdays - 1));
   const matches: MatchRecord[] = [];
   const stats: PlayerMatchStatsRecord[] = [];
@@ -250,7 +258,7 @@ export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
         ["away", ai, awayScore!, homeScore!, awayXg],
       ] as const) {
         stats.push(
-          ...playerStatsForMatch(squads[ti]!, externalId, teams[ti]!.externalId, goals, conceded, xg, rng(`${externalId}-${side}`), cardsByPlayer),
+          ...playerStatsForMatch(squads[ti]!, externalId, teams[ti]!.externalId, goals, conceded, xg, rng(`${externalId}-${side}`), cardsByPlayer, currentBoost),
         );
       }
     }
@@ -319,11 +327,81 @@ export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
     .filter((m) => m.status === "scheduled")
     .flatMap((m) => oddsForMatch(m, now));
 
-  const teamStats = matches
+  const allMatches = [...history.matches, ...matches];
+  const allStats = [...history.stats, ...stats];
+  const teamStats = allMatches
     .filter((m) => m.status === "finished")
-    .flatMap((m) => teamStatsForMatch(m, stats));
+    .flatMap((m) => teamStatsForMatch(m, allStats));
 
-  return { teams, players, matches, stats, teamStats, injuries, suspensions, contracts, broadcasts, odds };
+  return { teams, players, matches: allMatches, stats: allStats, teamStats, injuries, suspensions, contracts, broadcasts, odds };
+}
+
+/** Saisonbezeichnung, z. B. 2025 → "2025/26". */
+export function seasonLabel(startYear: number): string {
+  return `${startYear}/${String((startYear + 1) % 100).padStart(2, "0")}`;
+}
+
+function buildHistory(
+  teams: TeamRecord[],
+  squads: PlayerRecord[][],
+  schedule: [number, number][][],
+  now: Date,
+  seasons: number,
+): { matches: MatchRecord[]; stats: PlayerMatchStatsRecord[] } {
+  const matches: MatchRecord[] = [];
+  const stats: PlayerMatchStatsRecord[] = [];
+  const ignoredCards = new Map<string, { yellow: number; lastMatch: string }>();
+  for (let k = seasons; k >= 1; k--) {
+    const startYear = CURRENT_SEASON.startYear - k;
+    const season = seasonLabel(startYear);
+    const seasonStart = new Date(Date.UTC(startYear, 7, 22, 13, 30));
+    // Wer zu Saisonbeginn jünger als 18 war, spielte noch nicht mit.
+    const eligible = (p: PlayerRecord) =>
+      !p.birthDate || seasonStart.getUTCFullYear() - Number(p.birthDate.slice(0, 4)) >= 18;
+    const boost = (p: PlayerRecord) => 0.75 + rng(`form-${season}-${p.externalId}`)() * 0.5;
+    schedule.forEach((pairs, mdIndex) => {
+      const matchday = mdIndex + 1;
+      const kickoffAt = addDays(seasonStart, 7 * mdIndex);
+      for (const [hi, ai] of pairs) {
+        const externalId = `test-h${startYear}-m${matchday}-${hi + 1}-${ai + 1}`;
+        const mr = rng(externalId);
+        const homeXg = 1.45 * TEAMS[hi]!.strength / TEAMS[ai]!.strength ** 0.6;
+        const awayXg = 1.1 * TEAMS[ai]!.strength / TEAMS[hi]!.strength ** 0.6;
+        const homeScore = poisson(homeXg, mr);
+        const awayScore = poisson(awayXg, mr);
+        matches.push({
+          externalId,
+          competitionCode: TEST_COMPETITION.code,
+          season,
+          matchday,
+          stage: `Spieltag ${matchday}`,
+          homeTeam: teams[hi]!,
+          awayTeam: teams[ai]!,
+          kickoffAt,
+          kickoffTimeKnown: true,
+          status: "finished",
+          homeScore,
+          awayScore,
+        });
+        for (const [side, ti, goals, conceded, xg] of [
+          ["home", hi, homeScore, awayScore, homeXg],
+          ["away", ai, awayScore, homeScore, awayXg],
+        ] as const) {
+          const squad = squads[ti]!;
+          // Nur Spieler, die damals schon spielten – solange jede Position besetzbar bleibt.
+          const available = (Object.keys(STARTING_SLOTS) as Position[]).flatMap((pos) => {
+            const all = squad.filter((p) => p.position === pos);
+            const old = all.filter(eligible);
+            return old.length >= STARTING_SLOTS[pos] + (pos === "goalkeeper" ? 0 : 1) ? old : all;
+          });
+          stats.push(
+            ...playerStatsForMatch(available, externalId, teams[ti]!.externalId, goals, conceded, xg, rng(`${externalId}-${side}`), ignoredCards, boost),
+          );
+        }
+      }
+    });
+  }
+  return { matches, stats };
 }
 
 function playerStatsForMatch(
@@ -335,6 +413,8 @@ function playerStatsForMatch(
   teamXg: number,
   r: () => number,
   cardsByPlayer: Map<string, { yellow: number; lastMatch: string }>,
+  /** Formfaktor je Spieler (1 = normal), damit Formschwankungen messbar sind. */
+  boost: (p: PlayerRecord) => number = () => 1,
 ): PlayerMatchStatsRecord[] {
   // Startelf je Position, dazu bis zu drei Einwechslungen.
   const starters: PlayerRecord[] = [];
@@ -359,7 +439,8 @@ function playerStatsForMatch(
   // Tore und Vorlagen auf Feldspieler verteilen, gewichtet nach Position.
   const weight = (p: PlayerRecord) =>
     (p.position === "forward" ? 5 : p.position === "midfielder" ? 2.5 : p.position === "defender" ? 0.7 : 0) *
-    (minutes.get(p.externalId)! / 90);
+    (minutes.get(p.externalId)! / 90) *
+    boost(p);
   const pick = (exclude?: string) => {
     const pool = lineup.filter((p) => p.externalId !== exclude);
     const total = pool.reduce((s, p) => s + weight(p), 0);
@@ -389,11 +470,12 @@ function playerStatsForMatch(
     const a = assistsBy.get(p.externalId) ?? 0;
     const isGk = p.position === "goalkeeper";
     const isDef = p.position === "defender";
+    const b = boost(p);
     const xg = isGk ? 0 : round((teamXg * weight(p)) / totalWeight * (0.6 + r() * 0.8), 3);
     const passes = Math.round((isGk ? 28 : isDef ? 55 : 45) * share * (0.7 + r() * 0.6));
     const passPct = isGk ? 0.7 + r() * 0.15 : isDef ? 0.82 + r() * 0.12 : 0.75 + r() * 0.15;
     const duels = Math.round((isGk ? 1 : 12) * share * (0.6 + r() * 0.8));
-    const dribbles = isGk || isDef ? Math.round(r() * 2 * share) : Math.round((1 + r() * 5) * share);
+    const dribbles = isGk || isDef ? Math.round(r() * 2 * share * b) : Math.round((1 + r() * 5) * share * b);
     const shots = isGk ? 0 : Math.max(g, Math.round(xg * 7 + r() * 2 * share));
     const yellow = r() < 0.11 ? 1 : 0;
     const red = !yellow && r() < 0.008 ? 1 : 0;
@@ -402,9 +484,9 @@ function playerStatsForMatch(
       cardsByPlayer.set(p.externalId, { yellow: c.yellow + 1, lastMatch: matchExternalId });
     }
     const conceded90 = isGk ? conceded : null;
-    const psxgFaced = isGk ? round(conceded * (0.8 + r() * 0.5) + r() * 0.8, 3) : null;
+    const psxgFaced = isGk ? round(conceded * (0.8 + r() * 0.5) * b + r() * 0.8, 3) : null;
     const saves = isGk ? Math.round(1 + r() * 5) : null;
-    const rating = round(Math.min(10, Math.max(4.5, 6.4 + g * 0.8 + a * 0.5 - (isGk ? conceded * 0.3 : 0) + (r() - 0.5) * 1.2)), 1);
+    const rating = round(Math.min(10, Math.max(4.5, 6.4 + (b - 1) * 1.5 + g * 0.8 + a * 0.5 - (isGk ? conceded * 0.3 : 0) + (r() - 0.5) * 1.2)), 1);
     return {
       playerExternalId: p.externalId,
       matchExternalId,
@@ -415,17 +497,17 @@ function playerStatsForMatch(
       shots,
       shotsOnTarget: Math.min(shots, Math.max(g, Math.round(shots * (0.3 + r() * 0.3)))),
       xg,
-      xa: isGk ? 0 : round((a > 0 ? 0.3 : 0) + r() * 0.25 * share, 3),
+      xa: isGk ? 0 : round((a > 0 ? 0.3 : 0) + r() * 0.25 * share * b, 3),
       passes,
       passesCompleted: Math.round(passes * passPct),
-      keyPasses: isGk ? 0 : Math.round(r() * (p.position === "midfielder" ? 3 : 1.5) * share),
+      keyPasses: isGk ? 0 : Math.round(r() * (p.position === "midfielder" ? 3 : 1.5) * share * b),
       duels,
-      duelsWon: Math.round(duels * (0.4 + r() * 0.3)),
+      duelsWon: Math.min(duels, Math.round(duels * (0.4 + r() * 0.3) * Math.sqrt(b))),
       dribblesAttempted: dribbles,
       dribblesSuccessful: Math.round(dribbles * (0.4 + r() * 0.4)),
       dispossessed: isGk ? 0 : Math.round(r() * 3 * share),
       tackles: isGk ? 0 : Math.round((isDef ? 2.5 : 1.2) * r() * 2 * share),
-      clearances: isDef ? Math.round((2 + r() * 5) * share) : Math.round(r() * share),
+      clearances: isDef ? Math.round((2 + r() * 5) * share * b) : Math.round(r() * share),
       errorsLeadingToGoal: r() < 0.015 ? 1 : 0,
       foulsCommitted: isGk ? 0 : Math.round(r() * 2.5 * share),
       yellowCards: yellow,

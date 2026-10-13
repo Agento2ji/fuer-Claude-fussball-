@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { SearchDialog } from "@/components/search-dialog";
 import { THEME_INIT_SCRIPT, ThemeToggle } from "@/components/theme-toggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -43,7 +44,8 @@ export default function RootLayout({
               <Link href="/" className="font-semibold tracking-tight">
                 Fußball-Hub
               </Link>
-              <nav className="flex items-center gap-1 text-sm">
+              <nav aria-label="Hauptnavigation" className="flex items-center gap-1 text-sm">
+                <SearchDialog />
                 <Link href="/spieler" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
                   Spieler
                 </Link>

@@ -79,3 +79,19 @@ test("Quoten erst nach Altersbestätigung, mit Hilfehinweis und ohne Pinnacle", 
   await expect(page.getByRole("table").first()).toContainText("Winamax");
   await expect(page.locator("main")).not.toContainText("Pinnacle");
 });
+
+test("Suche per Tastatur: / öffnet, Pfeiltasten wählen, Enter öffnet", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("/");
+  const input = page.getByPlaceholder("Spieler, Team oder Spiel …");
+  await expect(input).toBeFocused();
+  await input.fill("nordstadt");
+  await expect(page.getByRole("option", { name: /FC Nordstadt/ }).first()).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/(teams|spieler|spiele)\/\d+/);
+
+  await page.keyboard.press("Control+k");
+  await page.getByPlaceholder("Spieler, Team oder Spiel …").fill("munchen");
+  await page.keyboard.press("Escape");
+  await expect(page.getByPlaceholder("Spieler, Team oder Spiel …")).toBeHidden();
+});

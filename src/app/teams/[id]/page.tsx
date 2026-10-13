@@ -94,7 +94,10 @@ export default async function TeamPage({ params }: Props) {
               <Link href={`/teams/${nextMatch.opponent.id}`} className="underline-offset-4 hover:text-foreground hover:underline">
                 {nextMatch.opponent.name}
               </Link>
-              , {nextMatch.competition.name}, {kickoffText(nextMatch.kickoffAt, nextMatch.kickoffTimeKnown)}
+              , {nextMatch.competition.name}, {kickoffText(nextMatch.kickoffAt, nextMatch.kickoffTimeKnown)} ·{" "}
+              <Link href={`/spiele/${nextMatch.id}`} className="text-primary underline-offset-4 hover:underline">
+                Zum Spiel
+              </Link>
             </span>
           </p>
         )}

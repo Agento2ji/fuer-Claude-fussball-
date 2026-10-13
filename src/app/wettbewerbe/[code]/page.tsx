@@ -106,11 +106,11 @@ export default async function CompetitionPage({ params }: Props) {
                     {m.matchday && `${m.matchday}. Spieltag · `}
                     {kickoffText(m.kickoffAt, m.kickoffTimeKnown)}
                   </p>
-                  <p>
-                    <Link href={`/teams/${m.home.id}`} className="hover:text-primary">{m.home.name}</Link>
+                  <Link href={`/spiele/${m.id}`} className="block hover:text-primary">
+                    {m.home.name}
                     <span className="text-muted-foreground"> – </span>
-                    <Link href={`/teams/${m.away.id}`} className="hover:text-primary">{m.away.name}</Link>
-                  </p>
+                    {m.away.name}
+                  </Link>
                 </li>
               ))}
             </ul>

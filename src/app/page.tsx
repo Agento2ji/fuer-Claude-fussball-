@@ -1,12 +1,19 @@
 import { ChevronRight, FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { dateLong } from "@/lib/format";
+import { kickoffText } from "@/lib/format";
 import { latestResultDates, listCompetitionsWithData } from "@/lib/queries/competition";
+import { upcomingMatches } from "@/lib/queries/match";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [competitions, lastResults] = await Promise.all([listCompetitionsWithData(), latestResultDates()]);
+  const now = new Date();
+  const [competitions, lastResults, next] = await Promise.all([
+    listCompetitionsWithData(),
+    latestResultDates(),
+    upcomingMatches(now),
+  ]);
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 pt-6 pb-16">
@@ -14,6 +21,28 @@ export default async function Home() {
         <h1 className="text-3xl font-semibold tracking-tight">Fußball-Hub</h1>
         <p className="mt-1 text-muted-foreground">Wer spielt, wer fehlt, wer ist in Form.</p>
       </div>
+
+      {next.length > 0 && (
+        <section aria-labelledby="naechste">
+          <h2 id="naechste" className="mb-2 text-sm font-medium text-muted-foreground">Nächste Spiele</h2>
+          <ul className="divide-y rounded-xl border bg-card">
+            {next.map((m) => (
+              <li key={m.id}>
+                <Link href={`/spiele/${m.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50">
+                  <span className="flex-1">
+                    <span className="block text-xs text-muted-foreground">
+                      {m.isTestData && <FlaskConical className="mr-1 inline size-3 text-status-warn" aria-label="Testdaten" />}
+                      {m.competition} · {kickoffText(m.kickoffAt, m.kickoffTimeKnown)}
+                    </span>
+                    <span className="block">{m.homeName} – {m.awayName}</span>
+                  </span>
+                  <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="wettbewerbe">
         <h2 id="wettbewerbe" className="mb-2 text-sm font-medium text-muted-foreground">Wettbewerbe</h2>

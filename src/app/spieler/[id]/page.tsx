@@ -113,7 +113,10 @@ export default async function PlayerPage({ params }: Props) {
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarClock className="size-4" aria-hidden />
             Nächstes Spiel: {data.nextMatch.isHome ? "gegen" : "bei"} {data.nextMatch.opponent},{" "}
-            {kickoffText(data.nextMatch.kickoffAt, data.nextMatch.kickoffTimeKnown)}
+            {kickoffText(data.nextMatch.kickoffAt, data.nextMatch.kickoffTimeKnown)} ·{" "}
+            <Link href={`/spiele/${data.nextMatch.id}`} className="text-primary underline-offset-4 hover:underline">
+              Zum Spiel
+            </Link>
           </p>
         )}
       </section>

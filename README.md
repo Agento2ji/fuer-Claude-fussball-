@@ -2,7 +2,8 @@
 
 Spielerstatus, Statistik, Formbewertung, Quotenvergleich und Übertragungsinfos
 für Premier League, Bundesliga, Serie A, LaLiga, Ligue 1, Champions League und
-Europa League (jeweils laufende Saison). Lernprojekt, läuft nur lokal.
+Europa League (jeweils laufende Saison). Lernprojekt, läuft lokal oder privat
+online hinter einem Passwort – nicht öffentlich.
 
 ## Schnellstart
 
@@ -32,6 +33,28 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 | `npm run ingest -- testdaten` | Erfundene „Testliga“ einspielen (siehe unten) |
 | `npm run lint` / `typecheck` / `test` | Prüfungen wie in der CI |
 | `npm run test:e2e` | E2E-Tests inkl. Barrierefreiheit (vorher `npm run build` und `npm run ingest -- testdaten`) |
+
+## Online (privat, mit Passwort)
+
+Kostenlos über Vercel (App) und Neon (Postgres). Die ganze Seite ist per
+Passwort geschützt und für Suchmaschinen gesperrt (`src/middleware.ts`),
+solange die Veröffentlichungs-Checkliste aus Abschnitt 8 nicht erledigt ist.
+
+1. **Neon:** Konto anlegen, Projekt in Region *Frankfurt (eu-central-1)*,
+   Verbindungs-String mit „Connection pooling“ kopieren
+   (`postgresql://…-pooler.…/neondb?sslmode=require`).
+2. **GitHub:** Repository → Settings → Secrets and variables → Actions →
+   Secret `DATABASE_URL` mit diesem String anlegen.
+3. **Daten:** Actions → „Daten“ → „Run workflow“. Der Job migriert, seedet
+   und ruft Spiele (und auf Wunsch die Testliga) ab; danach täglich um
+   04:17 UTC von selbst.
+4. **Vercel:** Konto mit GitHub anlegen, dieses Repository importieren und
+   unter Environment Variables setzen: `DATABASE_URL` (derselbe String),
+   `SITE_USER` (frei wählbar, Standard `fussball`) und `SITE_PASSWORD`
+   (mindestens 12 Zeichen). Deploy.
+
+Ohne `SITE_PASSWORD` ist die Seite offen – lokal gewollt, online nicht.
+Neue Commits auf `main` werden von Vercel automatisch ausgeliefert.
 
 ## Seiten
 
@@ -133,7 +156,8 @@ Jugendschutz und Spielerschutz (Abschnitt 8): Altersabfrage (18+) serverseitig
 vor jedem Quotenbereich, dauerhafter Hinweis auf die Beratung des BIÖG
 (früher BZgA, 0800 1 37 27 00, check-dein-spiel.de), keine Affiliate-Links,
 nüchterne Sprache ohne Tipps oder Gewinnversprechen. Impressum, Datenschutz
-und Cookie-Banner fehlen noch – die Seite läuft nur lokal.
+und Cookie-Banner fehlen noch – die Seite läuft daher nur lokal oder online
+hinter einem Passwort.
 
 ## Testdaten
 
@@ -167,8 +191,8 @@ Fallback-Kette und landen nie automatisch im Produktivpfad.
 | Champions und Europa League | keine Quelle | Key für football-data.org oder API-Football |
 | Senderangaben für echte Spiele | keine geprüfte Quelle | Entscheidung, ob eine belegte Rechte-Übersicht genügt |
 | Scraper offizieller Seiten | nicht gebaut | Prüfung der Nutzungsbedingungen je Seite |
-| Regelmäßige Abrufe | manuell per `npm run ingest` | bei Veröffentlichung: Cron (Vercel oder GitHub Actions) mit gehosteter Datenbank |
-| Veröffentlichung | läuft nur lokal | Impressum, Datenschutzerklärung, Cookie-Banner, Rechtelage für Logos; Checkliste aus Abschnitt 8 gemeinsam durchgehen |
+| Regelmäßige Abrufe | täglich per GitHub Actions (`daten.yml`), nur Spiele und Testliga | Quoten erst mit Key für The Odds API |
+| Veröffentlichung | lokal oder privat online mit Passwort | Impressum, Datenschutzerklärung, Cookie-Banner, Rechtelage für Logos; Checkliste aus Abschnitt 8 gemeinsam durchgehen |
 
 Ideen aus Abschnitt 12, die auf der Datenbasis direkt aufsetzen: Quotenbewegung
 als Kurve (`odds_snapshots` ist append-only), Rückrechnung der Value-Hinweise,

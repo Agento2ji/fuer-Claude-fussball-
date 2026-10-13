@@ -1,0 +1,45 @@
+name: Daten
+
+# Füllt die Online-Datenbank (Neon). Täglich und auf Knopfdruck.
+# Braucht das Repository-Secret DATABASE_URL (Verbindungs-String von Neon).
+
+on:
+  workflow_dispatch:
+    inputs:
+      testdaten:
+        description: "Testliga (erfundene, gekennzeichnete Daten) einspielen"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "17 4 * * *"
+
+concurrency:
+  group: daten
+  cancel-in-progress: false
+
+jobs:
+  abruf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Secret vorhanden?
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Repository-Secret DATABASE_URL fehlt (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run ingest -- spiele
+      # Testdaten liegen relativ zum heutigen Datum; täglich auffrischen,
+      # solange sie gewünscht sind (beim Zeitplan immer, von Hand abwählbar).
+      - if: github.event_name == 'schedule' || inputs.testdaten
+        run: npm run ingest -- testdaten

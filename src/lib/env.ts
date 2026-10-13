@@ -13,6 +13,8 @@ const serverEnvSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   SCRAPER_CONTACT_EMAIL: z.email().optional(),
+  SITE_USER: z.string().min(1).optional(),
+  SITE_PASSWORD: z.string().min(12, "SITE_PASSWORD muss mindestens 12 Zeichen haben").optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

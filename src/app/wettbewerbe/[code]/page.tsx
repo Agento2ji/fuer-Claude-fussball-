@@ -15,7 +15,10 @@ type Props = { params: Promise<{ code: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
   const data = await getCompetitionPage(code.toUpperCase());
-  return { title: data?.competition.name ?? "Wettbewerb" };
+  return {
+    title: data?.competition.name ?? "Wettbewerb",
+    description: data ? `${data.competition.name}: Tabelle und nächste Spiele.` : undefined,
+  };
 }
 
 export default async function CompetitionPage({ params }: Props) {

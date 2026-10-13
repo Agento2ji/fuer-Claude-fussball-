@@ -18,7 +18,10 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const data = Number.isInteger(Number(id)) ? await getMatchPage(Number(id)) : null;
-  return { title: data ? `${data.home.name} – ${data.away.name}` : "Spiel" };
+  return {
+    title: data ? `${data.home.name} – ${data.away.name}` : "Spiel",
+    description: data ? `${data.home.name} gegen ${data.away.name}: Anstoß, Übertragung, Form, Ausfälle und Aufstellungen.` : undefined,
+  };
 }
 
 export default async function MatchPage({ params }: Props) {
@@ -115,7 +118,7 @@ export default async function MatchPage({ params }: Props) {
           <CardContent className="space-y-6">
             {[home, away].map((t) => (
               <div key={t.id}>
-                <h3 className="mb-2 font-medium">{t.name}</h3>
+                <h2 className="mb-2 font-medium">{t.name}</h2>
                 {t.lineup ? (
                   <Lineup lineup={t.lineup} forms={finished ? new Map() : data.forms} showForm={!finished} />
                 ) : (
@@ -202,7 +205,7 @@ function AbsencesCard({ data }: { data: MatchPageData }) {
         ) : (
           sides.map((s) => (
             <div key={s.id}>
-              <h3 className="mb-1.5 text-sm font-medium">{s.name}</h3>
+              <h2 className="mb-1.5 text-sm font-medium">{s.name}</h2>
               {s.availability.absences.length === 0 && s.availability.atRisk.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Keine Ausfälle gemeldet.</p>
               ) : (

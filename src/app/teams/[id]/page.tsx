@@ -6,7 +6,7 @@ import { FormBadge } from "@/components/form-card";
 import { FormChip } from "@/components/form-chip";
 import { SourceFootnote, Sourced } from "@/components/source-note";
 import { TrafficPill } from "@/components/status-badge";
-import { GoalsByPeriodChart, XgChart } from "@/components/team-charts";
+import { GoalsByPeriodChart, XgChart } from "@/components/charts-lazy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dateLong, dateShort, de1, de2, kickoffText, pct, signed } from "@/lib/format";
 import { getForms } from "@/lib/queries/form";
@@ -21,7 +21,10 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const data = Number.isInteger(Number(id)) ? await getTeamPage(Number(id)) : null;
-  return { title: data?.team.name ?? "Team" };
+  return {
+    title: data?.team.name ?? "Team",
+    description: data ? `${data.team.name}: Tabellenplatz, Form, Ausfälle, Teamstatistik und Kader.` : undefined,
+  };
 }
 
 const POSITION_SHORT = { goalkeeper: "TW", defender: "AB", midfielder: "MF", forward: "ST" } as const;
@@ -31,7 +34,7 @@ export default async function TeamPage({ params }: Props) {
   const teamId = Number(id);
   if (!Number.isInteger(teamId)) notFound();
   const now = new Date();
-  const data = await getTeamPage(teamId, now);
+  const data = await getTeamPage(teamId);
   if (!data) notFound();
 
   const { team, standing, mainCompetition, form, nextMatch, stats } = data;
@@ -91,11 +94,11 @@ export default async function TeamPage({ params }: Props) {
             <CalendarClock className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
               Nächstes Spiel: {nextMatch.isHome ? "Heim gegen" : "Auswärts bei"}{" "}
-              <Link href={`/teams/${nextMatch.opponent.id}`} className="underline-offset-4 hover:text-foreground hover:underline">
+              <Link href={`/teams/${nextMatch.opponent.id}`} className="underline underline-offset-4 hover:text-foreground">
                 {nextMatch.opponent.name}
               </Link>
               , {nextMatch.competition.name}, {kickoffText(nextMatch.kickoffAt, nextMatch.kickoffTimeKnown)} ·{" "}
-              <Link href={`/spiele/${nextMatch.id}`} className="text-primary underline-offset-4 hover:underline">
+              <Link href={`/spiele/${nextMatch.id}`} className="text-primary underline underline-offset-4">
                 Zum Spiel
               </Link>
             </span>
@@ -115,12 +118,12 @@ export default async function TeamPage({ params }: Props) {
               </p>
             </CardHeader>
             <CardContent>
+              <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 pb-1 text-xs text-muted-foreground" aria-hidden>
+                <span />
+                <span className="w-16 text-right">Saison</span>
+                <span className="w-16 text-right">Letzte {last5Summary.matches}</span>
+              </div>
               <dl className="divide-y">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 pb-1 text-xs text-muted-foreground">
-                  <span />
-                  <span className="w-16 text-right">Saison</span>
-                  <span className="w-16 text-right">Letzte {last5Summary.matches}</span>
-                </div>
                 {(
                   [
                     ["Tore je Spiel", season.goalsPerMatch, last5Summary.goalsPerMatch, de1],
@@ -141,7 +144,10 @@ export default async function TeamPage({ params }: Props) {
                     <dd className="w-16 text-right text-lg font-semibold tabular-nums">
                       {a === null ? "–" : <Sourced source={stats[0]!.source} label={label}>{fmt.format(a)}</Sourced>}
                     </dd>
-                    <dd className="w-16 text-right text-lg tabular-nums text-muted-foreground">{b === null ? "–" : fmt.format(b)}</dd>
+                    <dd className="w-16 text-right text-lg tabular-nums text-muted-foreground">
+                      <span className="sr-only">letzte {last5Summary.matches}: </span>
+                      {b === null ? "–" : fmt.format(b)}
+                    </dd>
                   </div>
                 ))}
               </dl>

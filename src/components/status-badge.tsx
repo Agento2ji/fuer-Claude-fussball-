@@ -36,7 +36,7 @@ export function StatusBadge({
       <StatusIcon kind={kind} />
       <div className="min-w-0">
         <p className="text-lg font-semibold leading-tight">{label}</p>
-        {detail && <p className="text-sm opacity-90">{detail}</p>}
+        {detail && <p className="text-sm">{detail}</p>}
       </div>
     </div>
   );

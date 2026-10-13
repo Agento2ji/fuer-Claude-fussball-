@@ -10,7 +10,7 @@ const TIER_CLASSES: Record<FormTierKey, string> = {
   schlecht: "bg-status-danger/15 text-status-danger ring-status-danger/40",
   mittel: "bg-muted text-foreground ring-border",
   gut: "bg-status-ok/15 text-status-ok ring-status-ok/40",
-  bestform: "bg-primary/20 text-primary ring-primary/50",
+  bestform: "bg-primary/15 text-primary-ink ring-primary/50",
 };
 
 const pctFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });

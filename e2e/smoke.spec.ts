@@ -4,7 +4,7 @@ test("Startseite führt über Tabelle und Team zur Spielerseite", async ({ page 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Fußball-Hub", level: 1 })).toBeVisible();
 
-  await page.getByRole("link", { name: /Testliga/ }).click();
+  await page.locator("main a[href='/wettbewerbe/TEST']").click();
   await expect(page.getByRole("heading", { name: /Testliga/, level: 1 })).toBeVisible();
   const rows = page.getByRole("table").getByRole("row");
   await expect(rows).toHaveCount(7); // Kopfzeile + 6 Vereine

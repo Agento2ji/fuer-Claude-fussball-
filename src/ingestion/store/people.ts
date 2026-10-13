@@ -125,7 +125,11 @@ export async function writePlayerMatchStats(
     const cardRows: (typeof cards.$inferInsert)[] = [];
     if (r.yellowCards) cardRows.push({ type: "yellow", playerId, matchId, competitionId: competition.id, minute: null, ...provenanceValues(source.id, r) });
     if (r.redCards) cardRows.push({ type: "red", playerId, matchId, competitionId: competition.id, minute: null, ...provenanceValues(source.id, r) });
-    if (cardRows.length) await db.insert(cards).values(cardRows).onConflictDoNothing();
+    // Karten dieses Spiels aus dieser Quelle ersetzen, damit Korrekturen greifen.
+    await db
+      .delete(cards)
+      .where(and(eq(cards.matchId, matchId), eq(cards.playerId, playerId), eq(cards.sourceId, source.id)));
+    if (cardRows.length) await db.insert(cards).values(cardRows);
     written++;
   }
   return written;

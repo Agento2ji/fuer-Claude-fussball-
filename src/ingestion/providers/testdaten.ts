@@ -260,6 +260,26 @@ export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
     { playerExternalId: squads[2]![9]!.externalId, status: "doubtful", injuryType: "Prellung", description: "Sprunggelenk", since: isoDate(addDays(now, -3)), expectedReturn: isoDate(addDays(now, 4)) },
   ];
 
+  // Ein „Kartensammler“, damit die Sperrgefahr-Anzeige etwas zu zeigen hat:
+  // genau vier Gelbe in seinen ersten vier Einsätzen, sonst keine.
+  const collector = squads[4]![9]!.externalId;
+  let collected = 0;
+  for (const s of stats) {
+    if (s.playerExternalId !== collector) continue;
+    s.yellowCards = collected < 4 ? 1 : 0;
+    s.redCards = 0;
+    collected++;
+  }
+  cardsByPlayer.clear();
+  for (const s of stats) {
+    if (!s.yellowCards) continue;
+    const c = cardsByPlayer.get(s.playerExternalId);
+    cardsByPlayer.set(s.playerExternalId, {
+      yellow: (c?.yellow ?? 0) + 1,
+      lastMatch: s.matchExternalId,
+    });
+  }
+
   const lastPlayed = matches.filter((m) => m.status === "finished").at(-1)!;
   const suspensions: SuspensionRecord[] = [
     { playerExternalId: squads[3]![3]!.externalId, reason: "red", competitionCode: TEST_COMPETITION.code, matchesCount: 2, triggeredByMatchExternalId: lastPlayed.externalId },
@@ -272,7 +292,7 @@ export function buildTestWorld(now: Date, playedMatchdays = 7): TestWorld {
 
   const contracts: ContractRecord[] = players.map((p) => {
     const cr = rng(`vertrag-${p.externalId}`);
-    const endYear = now.getUTCFullYear() + Math.floor(cr() * 4);
+    const endYear = now.getUTCFullYear() + 1 + Math.floor(cr() * 4);
     return {
       playerExternalId: p.externalId,
       teamExternalId: p.teamExternalId,

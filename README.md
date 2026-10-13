@@ -31,7 +31,7 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 | `npm run ingest -- quoten [CODE …]` | Quoten abrufen (braucht `THE_ODDS_API_KEY`, sonst übersprungen) |
 | `npm run ingest -- testdaten` | Erfundene „Testliga“ einspielen (siehe unten) |
 | `npm run lint` / `typecheck` / `test` | Prüfungen wie in der CI |
-| `npm run test:e2e` | E2E-Smoke-Tests (vorher `npm run build` und `npm run ingest -- testdaten`) |
+| `npm run test:e2e` | E2E-Tests inkl. Barrierefreiheit (vorher `npm run build` und `npm run ingest -- testdaten`) |
 
 ## Seiten
 
@@ -45,7 +45,8 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 | `/spieler` und `/spieler/[id]` | Kaderliste und Spielerseite mit Status, Sperrgefahr, Statistik, Vertrag |
 
 Jede angezeigte Zahl ist antippbar und zeigt Quelle und Abrufzeitpunkt.
-Testdaten sind auf jeder Seite deutlich gekennzeichnet.
+Testdaten sind auf jeder Seite deutlich gekennzeichnet. Suche über Spieler,
+Teams und Spiele aus jedem Bildschirm mit `/` oder `Strg/⌘ + K`.
 
 ## Formbewertung
 
@@ -145,3 +146,30 @@ erfundene Verletzung eines echten Spielers wäre eine Falschinformation.
 Testdaten tragen die Quelle `testdaten`, der Wettbewerb ist mit
 `is_test_data` markiert, und die UI kennzeichnet sie. Sie stehen in keiner
 Fallback-Kette und landen nie automatisch im Produktivpfad.
+
+## Qualität
+
+- **Tests:** Unit- und Integrationstests (`npm test`), E2E-Tests in
+  Handyansicht inklusive axe-Prüfung auf WCAG 2.1 AA in hell und dunkel
+  (`npm run test:e2e`). Beides läuft in der CI bei jedem Push.
+- **Lighthouse (Handy, Produktions-Build, 13.10.2026):** Performance 92–99,
+  Barrierefreiheit, Best Practices und SEO je 100. Ausnahme: SEO der
+  Quotenseiten, die bewusst `noindex` tragen.
+- **Ladeverhalten:** Skelett-Zustände statt Spinner; Diagramme werden nach
+  dem ersten Rendern nachgeladen, damit langsame Handys die Seite sofort sehen.
+
+## Offene Punkte
+
+| Thema | Stand | Was es braucht |
+| --- | --- | --- |
+| Echte Spielerdaten, Ausfälle, Aufstellungen | nur Testdaten | kostenlose Keys für API-Football bzw. football-data.org |
+| Echte Quoten | nur Testdaten | kostenloser Key für The Odds API (500 Credits/Monat ≈ ein Abruf pro Tag) |
+| Champions und Europa League | keine Quelle | Key für football-data.org oder API-Football |
+| Senderangaben für echte Spiele | keine geprüfte Quelle | Entscheidung, ob eine belegte Rechte-Übersicht genügt |
+| Scraper offizieller Seiten | nicht gebaut | Prüfung der Nutzungsbedingungen je Seite |
+| Regelmäßige Abrufe | manuell per `npm run ingest` | bei Veröffentlichung: Cron (Vercel oder GitHub Actions) mit gehosteter Datenbank |
+| Veröffentlichung | läuft nur lokal | Impressum, Datenschutzerklärung, Cookie-Banner, Rechtelage für Logos; Checkliste aus Abschnitt 8 gemeinsam durchgehen |
+
+Ideen aus Abschnitt 12, die auf der Datenbasis direkt aufsetzen: Quotenbewegung
+als Kurve (`odds_snapshots` ist append-only), Rückrechnung der Value-Hinweise,
+Vertragsablauf-Radar und Vergleichsansicht zweier Spieler.

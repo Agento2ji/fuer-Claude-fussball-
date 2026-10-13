@@ -327,7 +327,7 @@ export function buildTestWorld(now: Date, playedMatchdays = 7, historySeasons = 
 
   const odds: OddsRecord[] = matches
     .filter((m) => m.status === "scheduled")
-    .flatMap((m) => oddsForMatch(m, now));
+    .flatMap((m) => oddsForMatch(m, now, m.matchday === playedMatchdays + 1));
 
   // Aufstellungen: bestätigt für gespielte Partien (Startelf = mindestens 45 Minuten),
   // voraussichtlich für das jeweils nächste Spiel jedes Teams – ohne Verletzte und Gesperrte.
@@ -613,7 +613,11 @@ function teamStatsForMatch(m: MatchRecord, stats: PlayerMatchStatsRecord[]): Tea
   });
 }
 
-function oddsForMatch(m: MatchRecord, now: Date): OddsRecord[] {
+/**
+ * `outlier`: Am nächsten Spieltag liegt Winamax bei Remis und „Über 2,5“
+ * absichtlich über dem Markt, damit die Value-Anzeige etwas zu zeigen hat.
+ */
+function oddsForMatch(m: MatchRecord, now: Date, outlier = false): OddsRecord[] {
   const hi = TEAMS.findIndex((t) => t.name === m.homeTeam.name);
   const ai = TEAMS.findIndex((t) => t.name === m.awayTeam.name);
   const diff = Math.log(TEAMS[hi]!.strength / TEAMS[ai]!.strength) + 0.25;
@@ -621,6 +625,8 @@ function oddsForMatch(m: MatchRecord, now: Date): OddsRecord[] {
   const pDraw = 0.26;
   const pAway = 1 - pHome - pDraw;
   const pOver = 0.52 + (TEAMS[hi]!.strength + TEAMS[ai]!.strength - 2) * 0.1;
+  const outlierBoost = (bookmakerKey: string, selection: string, price: number) =>
+    outlier && bookmakerKey === "winamax" ? round(price * (selection === "draw" ? 1.16 : 1.1), 2) : price;
   const out: OddsRecord[] = [];
   for (const [bookmakerKey, margin] of Object.entries(BOOKMAKER_MARGINS)) {
     const r = rng(`${m.externalId}-${bookmakerKey}`);
@@ -634,9 +640,9 @@ function oddsForMatch(m: MatchRecord, now: Date): OddsRecord[] {
     };
     out.push(
       { ...base, market: "h2h", selection: "home", line: null, price: price(pHome) },
-      { ...base, market: "h2h", selection: "draw", line: null, price: price(pDraw) },
+      { ...base, market: "h2h", selection: "draw", line: null, price: outlierBoost(bookmakerKey, "draw", price(pDraw)) },
       { ...base, market: "h2h", selection: "away", line: null, price: price(pAway) },
-      { ...base, market: "totals", selection: "over", line: 2.5, price: price(pOver) },
+      { ...base, market: "totals", selection: "over", line: 2.5, price: outlierBoost(bookmakerKey, "over", price(pOver)) },
       { ...base, market: "totals", selection: "under", line: 2.5, price: price(1 - pOver) },
     );
   }

@@ -31,6 +31,19 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 | `npm run ingest -- quoten [CODE …]` | Quoten abrufen (braucht `THE_ODDS_API_KEY`, sonst übersprungen) |
 | `npm run ingest -- testdaten` | Erfundene „Testliga“ einspielen (siehe unten) |
 | `npm run lint` / `typecheck` / `test` | Prüfungen wie in der CI |
+| `npm run test:e2e` | E2E-Smoke-Tests (vorher `npm run build` und `npm run ingest -- testdaten`) |
+
+## Seiten
+
+| Pfad | Inhalt |
+| --- | --- |
+| `/` | Wettbewerbe mit Datenstand |
+| `/wettbewerbe/[code]` | Tabelle (aus Ergebnissen berechnet) und nächste Spiele |
+| `/teams/[id]` | Platz, Punkte, Form, nächstes Spiel, Ausfälle, Teamstatistik, Kader |
+| `/spieler` und `/spieler/[id]` | Kaderliste und Spielerseite mit Status, Sperrgefahr, Statistik, Vertrag |
+
+Jede angezeigte Zahl ist antippbar und zeigt Quelle und Abrufzeitpunkt.
+Testdaten sind auf jeder Seite deutlich gekennzeichnet.
 
 ## Aufbau
 

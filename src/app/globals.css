@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* Dark Mode ist Standard; Light Mode über data-theme="light" am <html>. */
+
+:root {
+  --background: #0b0f14;
+  --surface: #121821;
+  --border: #1f2833;
+  --foreground: #e6edf3;
+  --muted: #8b98a8;
+  --accent: #3fb68b;
+}
+
+:root[data-theme="light"] {
+  --background: #f7f9fb;
+  --surface: #ffffff;
+  --border: #dde3ea;
+  --foreground: #111827;
+  --muted: #5b6676;
+  --accent: #1f8a64;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

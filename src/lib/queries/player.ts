@@ -159,7 +159,7 @@ export async function getPlayerPage(playerId: number, now: Date = new Date()) {
 
   const [nextMatch] = p.team
     ? await db
-        .select({ kickoffAt: matches.kickoffAt, kickoffTimeKnown: matches.kickoffTimeKnown, homeTeamId: matches.homeTeamId, homeName: home.name, awayName: away.name, competition: competitions.name })
+        .select({ id: matches.id, kickoffAt: matches.kickoffAt, kickoffTimeKnown: matches.kickoffTimeKnown, homeTeamId: matches.homeTeamId, homeName: home.name, awayName: away.name, competition: competitions.name })
         .from(matches)
         .innerJoin(home, eq(home.id, matches.homeTeamId))
         .innerJoin(away, eq(away.id, matches.awayTeamId))
@@ -195,6 +195,7 @@ export async function getPlayerPage(playerId: number, now: Date = new Date()) {
       : null,
     nextMatch: nextMatch
       ? {
+          id: nextMatch.id,
           kickoffAt: nextMatch.kickoffAt,
           kickoffTimeKnown: nextMatch.kickoffTimeKnown,
           competition: nextMatch.competition,

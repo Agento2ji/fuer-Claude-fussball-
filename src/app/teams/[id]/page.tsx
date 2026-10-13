@@ -2,12 +2,14 @@ import { CalendarClock, FlaskConical, HeartPulse, Ban, TriangleAlert, Users } fr
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FormBadge } from "@/components/form-card";
 import { FormChip } from "@/components/form-chip";
 import { SourceFootnote, Sourced } from "@/components/source-note";
 import { TrafficPill } from "@/components/status-badge";
 import { GoalsByPeriodChart, XgChart } from "@/components/team-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dateLong, dateShort, de1, de2, kickoffText, pct, signed } from "@/lib/format";
+import { getForms } from "@/lib/queries/form";
 import { getTeamPage, type TeamPageData } from "@/lib/queries/team";
 import { GOAL_PERIODS, summarizeTeam } from "@/lib/team-stats";
 import { cn } from "@/lib/utils";
@@ -33,6 +35,7 @@ export default async function TeamPage({ params }: Props) {
   if (!data) notFound();
 
   const { team, standing, mainCompetition, form, nextMatch, stats } = data;
+  const forms = await getForms(data.squad.map((p) => p.id), now);
   const season = summarizeTeam(stats);
   const last5 = stats.slice(0, 5);
   const last5Summary = summarizeTeam(last5);
@@ -206,7 +209,8 @@ export default async function TeamPage({ params }: Props) {
                   <Link href={`/spieler/${p.id}`} className="flex items-center gap-3 py-2 hover:text-primary">
                     <span className="w-6 text-right text-sm tabular-nums text-muted-foreground">{p.shirtNumber}</span>
                     <span className="flex-1">{p.name}</span>
-                    <span className="text-xs text-muted-foreground">{p.position ? POSITION_SHORT[p.position] : ""}</span>
+                    <FormBadge form={forms.get(p.id)} />
+                    <span className="w-6 text-right text-xs text-muted-foreground">{p.position ? POSITION_SHORT[p.position] : ""}</span>
                   </Link>
                 </li>
               ))}

@@ -121,6 +121,14 @@ describe("Teamnamen", () => {
     expect(sameTeam("Paris Saint-Germain FC", "PSG")).toBe(true);
   });
 
+  it("ordnet Ligue-1-Vereinsnamen den Städtenamen der Quoten zu", () => {
+    expect(sameTeam("Stade Brestois 29", "Brest")).toBe(true);
+    expect(sameTeam("Stade Rennais FC 1901", "Rennes")).toBe(true);
+    expect(sameTeam("Olympique Lyonnais", "Lyon")).toBe(true);
+    expect(sameTeam("Olympique Lyonnais", "Olympique de Marseille")).toBe(false);
+    expect(sameTeam("Deportivo Alavés", "Alavés")).toBe(true);
+  });
+
   it("verwechselt keine Stadtrivalen bei exakten Treffern", () => {
     const teams = [
       { name: "FC Internazionale Milano" },

@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { competitions } from "@/db/schema";
+import { and, eq, gt, sql } from "drizzle-orm";
+import { competitions, matches } from "@/db/schema";
 import { withFallback } from "../fallback";
 import { TEST_COMPETITION, TestdatenProvider } from "../providers/testdaten";
 import { matchProviders, oddsProviders } from "../registry";
@@ -47,7 +47,26 @@ export async function syncMatches(
 }
 
 /** Quoten eines Wettbewerbs als neue Snapshots. */
-export async function syncOdds(db: DbLike, competitionCode: string): Promise<JobOutcome> {
+export async function syncOdds(
+  db: DbLike,
+  competitionCode: string,
+  now: Date = new Date(),
+): Promise<JobOutcome> {
+  // Quoten kosten Kontingent. Ohne anstehende Spiele in der Datenbank ließe
+  // sich keine Quote zuordnen – dann gar nicht erst abrufen.
+  const [upcoming] = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .innerJoin(competitions, eq(competitions.id, matches.competitionId))
+    .where(and(eq(competitions.code, competitionCode), gt(matches.kickoffAt, now)))
+    .limit(1);
+  if (!upcoming) {
+    return {
+      status: "skipped",
+      itemsWritten: 0,
+      details: { grund: "Keine anstehenden Spiele in der Datenbank – Abruf übersprungen, spart Kontingent" },
+    };
+  }
   const providers = oddsProviders();
   const fb = await withFallback(
     providers,

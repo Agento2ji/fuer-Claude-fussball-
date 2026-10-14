@@ -10,8 +10,12 @@ export interface WriteOddsResult {
   unmatchedEvents: string[];
 }
 
-/** Zeitfenster für die Zuordnung eines Quoten-Events zu einem Spiel. */
-const MATCH_WINDOW_MS = 36 * 60 * 60 * 1000;
+/**
+ * Zeitfenster für die Zuordnung eines Quoten-Events zu einem Spiel. Weit
+ * genug für Spieltage, die openfootball nur mit Datum führt (Freitags- oder
+ * Montagsspiele); eindeutig bleibt es, weil Heim und Gast passen müssen.
+ */
+const MATCH_WINDOW_MS = 4 * 24 * 60 * 60 * 1000;
 
 /**
  * Hängt Quoten als neue Snapshots an (append-only). Events, die keinem

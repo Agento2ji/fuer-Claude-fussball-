@@ -37,6 +37,10 @@ const ALIASES: Record<string, string> = {
   gladbach: "monchengladbach",
   "rb leipzig": "leipzig",
   "rasenballsport leipzig": "leipzig",
+  // Ligue 1: openfootball nennt die Vereinsnamen, The Odds API die Städte.
+  "stade brestois 29": "brest",
+  "stade rennais 1901": "rennes",
+  lyonnais: "lyon",
 };
 
 export function normalizeTeamName(name: string): string {

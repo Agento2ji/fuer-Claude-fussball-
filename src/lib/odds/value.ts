@@ -6,11 +6,13 @@
  * 2. Faire Wahrscheinlichkeit = Konsens über alle Anbieter, gewichtet mit
  *    1 / Marge (schärfere Märkte zählen mehr).
  * 3. EV = faire Wahrscheinlichkeit × beste verfügbare Quote − 1, wobei nur
- *    Anbieter mit deutscher Erlaubnis als „verfügbar“ gelten.
+ *    deutsche Seiten von Anbietern mit deutscher Erlaubnis als „verfügbar“
+ *    gelten. Auslandsversionen werden angezeigt und getrennt als Hinweis
+ *    bewertet, aber nie als Value-Tipp gezählt.
  * 4. Kelly f = (p·q − 1) / (q − 1), angezeigt wird ein Viertel.
  * 5. Risiko = Standardabweichung der Auszahlung je 1 € Einsatz.
  */
-import { BOOKMAKERS, type BookmakerConfig, isComparable } from "@/config/bookmakers";
+import { BOOKMAKERS, type BookmakerConfig, isComparable, isPlayableInGermany } from "@/config/bookmakers";
 import { KELLY_FRACTION, MARGIN_FLOOR, MIN_EV, PRIMARY_DEVIG, RISK_LEVELS, STALE_MINUTES, TOP_N } from "@/config/value";
 import { devig, type DevigMethod, margin } from "./devig";
 
@@ -36,9 +38,12 @@ export interface SelectionAnalysis {
   fairProbability: number;
   fairOdds: number;
   byMethod: Record<DevigMethod, number>;
-  /** Quoten der vergleichbaren Anbieter. */
-  prices: { bookmakerKey: string; price: number; fetchedAt: Date; isBest: boolean }[];
+  /** Quoten der angezeigten Anbieter (deutsche Seiten und Auslandsversionen). */
+  prices: { bookmakerKey: string; price: number; fetchedAt: Date; isBest: boolean; playable: boolean }[];
+  /** Beste Quote einer deutschen Seite – Grundlage für EV, Kelly und Risiko. */
   best: { bookmakerKey: string; price: number; fetchedAt: Date } | null;
+  /** Beste Quote einer Auslandsversion, nur als Richtwert. */
+  abroad: { bookmakerKey: string; price: number; fetchedAt: Date; ev: number } | null;
   ev: number | null;
   kellyFull: number | null;
   kellyShown: number | null;
@@ -97,15 +102,21 @@ export function analyzeMarket(input: MarketInput, now: Date): MarketAnalysis | n
     const p = byMethod[PRIMARY_DEVIG];
     const prices = Object.entries(input.quotes)
       .filter(([key, q]) => q[selection] && byKey.get(key) && isComparable(byKey.get(key)!))
-      .map(([key, q]) => ({ bookmakerKey: key, price: q[selection]!.price, fetchedAt: q[selection]!.fetchedAt, isBest: false }));
-    const bestPrice = Math.max(...prices.map((x) => x.price));
-    // Bei Gleichstand gewinnt die frischere Quote.
-    const best = prices
-      .filter((x) => x.price === bestPrice)
-      .sort((a, b) => b.fetchedAt.getTime() - a.fetchedAt.getTime())[0];
+      .map(([key, q]) => ({
+        bookmakerKey: key,
+        price: q[selection]!.price,
+        fetchedAt: q[selection]!.fetchedAt,
+        isBest: false,
+        playable: isPlayableInGermany(byKey.get(key)!),
+      }));
+    const best = highest(prices.filter((x) => x.playable));
     if (best) best.isBest = true;
+    const top = highest(prices.filter((x) => !x.playable));
+    const abroad = top
+      ? { bookmakerKey: top.bookmakerKey, price: top.price, fetchedAt: top.fetchedAt, ev: p * top.price - 1 }
+      : null;
     if (!best) {
-      return { selection, fairProbability: p, fairOdds: 1 / p, byMethod, prices, best: null, ev: null, kellyFull: null, kellyShown: null, stdDev: null, risk: null, stale: false };
+      return { selection, fairProbability: p, fairOdds: 1 / p, byMethod, prices, best: null, abroad, ev: null, kellyFull: null, kellyShown: null, stdDev: null, risk: null, stale: false };
     }
     const q = best.price;
     const ev = p * q - 1;
@@ -118,6 +129,7 @@ export function analyzeMarket(input: MarketInput, now: Date): MarketAnalysis | n
       byMethod,
       prices,
       best: { bookmakerKey: best.bookmakerKey, price: q, fetchedAt: best.fetchedAt },
+      abroad,
       ev,
       kellyFull,
       kellyShown: Math.max(0, kellyFull) * KELLY_FRACTION,
@@ -128,6 +140,11 @@ export function analyzeMarket(input: MarketInput, now: Date): MarketAnalysis | n
   });
 
   return { market: input.market, line: input.line, selections, margins, consensusSize: consensus.length };
+}
+
+/** Höchste Quote; bei Gleichstand gewinnt die frischere. */
+function highest<T extends { price: number; fetchedAt: Date }>(prices: T[]): T | undefined {
+  return [...prices].sort((a, b) => b.price - a.price || b.fetchedAt.getTime() - a.fetchedAt.getTime())[0];
 }
 
 export interface ValueBet extends SelectionAnalysis {
@@ -152,4 +169,25 @@ export function valueBets(markets: MarketAnalysis[]): { all: ValueBet[]; top: Va
     .sort((a, b) => b.ev! - a.ev!);
   const top = [...all].sort((a, b) => b.score - a.score).slice(0, TOP_N);
   return { all, top };
+}
+
+export interface AbroadHint extends SelectionAnalysis {
+  market: string;
+  line: number | null;
+  abroad: NonNullable<SelectionAnalysis["abroad"]>;
+}
+
+/**
+ * Ausgänge, bei denen eine Auslandsversion mindestens den Mindest-EV
+ * erreicht und mehr bietet als die beste deutsche Quote. Nur ein Hinweis,
+ * die Quote auf der deutschen Seite des Anbieters selbst zu prüfen.
+ */
+export function abroadHints(markets: MarketAnalysis[]): AbroadHint[] {
+  return markets
+    .flatMap((m) =>
+      m.selections
+        .filter((s) => s.abroad && s.abroad.ev >= MIN_EV && (!s.best || s.abroad.price > s.best.price))
+        .map((s) => ({ ...s, market: m.market, line: m.line, abroad: s.abroad! })),
+    )
+    .sort((a, b) => b.abroad.ev - a.abroad.ev);
 }

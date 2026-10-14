@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { devigPower } from "@/lib/odds/devig";
-import { analyzeMarket, kelly, type MarketAnalysis, type MarketInput, riskLevel, valueBets } from "@/lib/odds/value";
+import { abroadHints, analyzeMarket, kelly, type MarketAnalysis, type MarketInput, riskLevel, valueBets } from "@/lib/odds/value";
 
 const NOW = new Date("2026-10-13T12:00:00Z");
 const fresh = new Date(NOW.getTime() - 5 * 60_000);
@@ -83,7 +83,7 @@ describe("valueBets", () => {
     const stdDev = price * Math.sqrt(p * (1 - p));
     return {
       selection, fairProbability: p, fairOdds: 1 / p, byMethod: { proportional: p, power: p, shin: p },
-      prices: [], best: { bookmakerKey: "tipico", price, fetchedAt: fresh }, ev, kellyFull: kelly(p, price),
+      prices: [], best: { bookmakerKey: "tipico", price, fetchedAt: fresh }, abroad: null, ev, kellyFull: kelly(p, price),
       kellyShown: kelly(p, price) / 4, stdDev, risk: riskLevel(stdDev), stale: false,
     };
   };
@@ -106,5 +106,35 @@ describe("valueBets", () => {
     expect(riskLevel(0.7)).toBe("low");
     expect(riskLevel(1.5)).toBe("medium");
     expect(riskLevel(2.7)).toBe("high");
+  });
+});
+
+describe("Auslandsversionen", () => {
+  const withAbroad: MarketInput = {
+    ...h2h,
+    quotes: { ...h2h.quotes, betway: { home: q(2.05), draw: q(3.9), away: q(3.6) } },
+  };
+  const a = analyzeMarket(withAbroad, NOW)!;
+  const draw = a.selections[1]!;
+
+  it("werden angezeigt, zählen aber nie als beste spielbare Quote", () => {
+    expect(draw.prices.map((p) => p.bookmakerKey).sort()).toEqual(["betway", "tipico", "winamax"]);
+    expect(draw.prices.find((p) => p.bookmakerKey === "betway")!.playable).toBe(false);
+    expect(draw.best!.bookmakerKey).toBe("tipico");
+    expect(draw.prices.find((p) => p.isBest)!.bookmakerKey).toBe("tipico");
+    expect(draw.ev).toBeCloseTo(draw.fairProbability * 3.4 - 1, 12);
+  });
+
+  it("liefern einen getrennten Hinweis mit eigenem EV", () => {
+    expect(draw.abroad).toMatchObject({ bookmakerKey: "betway", price: 3.9 });
+    expect(draw.abroad!.ev).toBeCloseTo(draw.fairProbability * 3.9 - 1, 12);
+    const hints = abroadHints([a]);
+    expect(hints.every((h) => h.abroad.ev >= 0.02)).toBe(true);
+    expect(hints.some((h) => h.selection === "draw")).toBe(true);
+  });
+
+  it("tauchen nicht in den Value-Tipps auf", () => {
+    const { all } = valueBets([a]);
+    expect(all.every((b) => b.best!.bookmakerKey !== "betway")).toBe(true);
   });
 });

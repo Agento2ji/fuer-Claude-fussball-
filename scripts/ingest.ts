@@ -15,10 +15,15 @@ import { parseServerEnv } from "../src/lib/env";
 
 config({ path: ".env.local", quiet: true });
 
-const USAGE = "Aufruf: npm run ingest -- <spiele|quoten|testdaten|alle> [CODE …]";
+const USAGE = "Aufruf: npm run ingest -- <spiele|quoten|testdaten|alle> [CODE …] [--probelauf]";
+
+/** Probelauf: alles abrufen und zuordnen, am Ende aber nichts speichern. */
+class Probelauf extends Error {}
 
 async function main() {
-  const [command, ...codesArg] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const dryRun = args.includes("--probelauf");
+  const [command, ...codesArg] = args.filter((a) => a !== "--probelauf");
   const env = parseServerEnv(process.env);
   const { db, client } = createDb(env.DATABASE_URL, 1);
   const all = COMPETITIONS.map((c) => c.code as string);
@@ -30,6 +35,18 @@ async function main() {
   try {
     switch (command) {
       case "spiele":
+        if (dryRun) {
+          await db
+            .transaction(async (tx) => {
+              for (const c of codes) reports.push(await runJob(tx, `spiele:${c}`, () => syncMatches(tx, c)));
+              throw new Probelauf();
+            })
+            .catch((err: unknown) => {
+              if (!(err instanceof Probelauf)) throw err;
+            });
+          console.log("Probelauf: nichts gespeichert.");
+          break;
+        }
         for (const c of codes) reports.push(await runJob(db, `spiele:${c}`, () => syncMatches(db, c)));
         break;
       case "quoten":
@@ -59,6 +76,8 @@ async function main() {
     if (typeof d.grund === "string") console.log(`  ${d.grund}`);
     if (typeof d.anbieter === "string") console.log(`  Anbieter: ${d.anbieter}`);
     for (const w of (d.warnings as string[] | undefined) ?? []) console.log(`  Hinweis: ${w}`);
+    const newTeams = (d.newTeams as string[] | undefined) ?? [];
+    if (newTeams.length) console.log(`  Neue Teams (${newTeams.length}): ${newTeams.join("; ")}`);
     if (typeof d.conflicts === "number" && d.conflicts > 0) console.log(`  Neue Quellenkonflikte: ${d.conflicts}`);
     for (const a of (d.versuche as { provider: string; outcome: string; error?: string }[] | undefined) ?? []) {
       if (a.outcome === "fehlgeschlagen") console.log(`  ${a.provider} fehlgeschlagen: ${a.error ?? "?"}`);

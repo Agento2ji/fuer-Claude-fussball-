@@ -20,6 +20,8 @@ export interface WriteMatchesResult {
   updated: number;
   unchanged: number;
   conflicts: number;
+  /** Teams, die keinem vorhandenen zugeordnet werden konnten und neu angelegt wurden. */
+  newTeams: string[];
   /** Plausibilitätsbefunde, z. B. fehlende Ergebnisse. */
   warnings: string[];
 }
@@ -58,6 +60,7 @@ export async function writeMatches(
     updated: 0,
     unchanged: 0,
     conflicts: 0,
+    newTeams: [],
     warnings: [],
   };
   if (records.length === 0) return result;
@@ -135,6 +138,7 @@ export async function writeMatches(
         .returning({ id: teams.id });
       id = row!.id;
       teamCandidates.set(id, { id, name: team.name });
+      result.newTeams.push(team.name);
     }
     teamLinks.push({ entityId: id, externalId: team.externalId });
     teamMap.set(team.externalId, id);

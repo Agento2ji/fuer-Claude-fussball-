@@ -71,7 +71,8 @@ dauert so rund eine Minute statt über einer Viertelstunde.
 
 | Pfad | Inhalt |
 | --- | --- |
-| `/` | Nächste Spiele und Wettbewerbe mit Datenstand |
+| `/` | Value-Tipps über alle Spiele der nächsten 14 Tage, filterbar nach Liga, Markt, Risiko; sortierbar (ab 18) |
+| `/wettbewerbe` | Nächste Spiele und Wettbewerbe mit Datenstand |
 | `/wettbewerbe/[code]` | Tabelle (aus Ergebnissen berechnet) und nächste Spiele |
 | `/teams/[id]` | Platz, Punkte, Form, nächstes Spiel, Ausfälle, Teamstatistik, Kader |
 | `/quoten`, `/spiele/[id]/quoten` | Quotenübersicht und Vergleich je Spiel (ab 18) |
@@ -134,7 +135,7 @@ Vorgabe: zunächst 0 € Budget. Stand der Recherche: 13.10.2026.
 | [The Odds API](https://the-odds-api.com) | Quoten Tipico, Winamax, Pinnacle | 0 €; 59 $/Monat für 100.000 Credits | 500 Credits/Monat | 1 Credit je Markt und je 10 Buchmacher, also 2 Credits je Wettbewerb (1X2, Über/Unter); leere Antworten kostenlos. Wettbewerbe ohne anstehende Spiele in der Datenbank (derzeit CL, EL) werden übersprungen; täglicher Abruf der 5 Ligen ≈ 310 Credits/Monat | aktiv (mit Key) |
 | Understat | xG, xA | – | – | robots.txt sperrt alles | verworfen |
 | FBref | xG, xA | – | – | robots.txt nicht abrufbar (403); Bedingungen zu prüfen | offen |
-| Transfermarkt | Verträge, Marktwerte | – | – | Keine öffentliche API; robots.txt erlaubt Profilseiten, Nutzungsbedingungen noch zu prüfen | offen |
+| Transfermarkt | Verträge, Marktwerte | – | – | Nutzungsbedingungen 11.1 (geprüft 14.10.2026) verbieten Bots, Spider und Screenscraping; Text und Data Mining ist vorbehalten | verworfen |
 | bundesliga.com, dfb.de, kicker.de, sportschau.de, premierleague.com | Sperren, Verletzungen, Übertragung | – | – | robots.txt erlaubt die relevanten Pfade; Nutzungsbedingungen noch zu prüfen | offen |
 | uefa.com, dfl.de | Champions/Europa League, Mitteilungen | – | – | robots.txt nicht abrufbar | offen |
 
@@ -146,11 +147,24 @@ eingebaut, weil sie sich je Spiel nicht verlässlich belegen lässt.
 
 ### Buchmacher
 
-Verglichen werden Tipico und Winamax. Beide haben eine deutsche Erlaubnis für
-Sportwetten (GGL-Whitelist, geprüft am 13.10.2026: Tipico Co. Limited seit
-09.10.2020, WINAMAX SA seit 29.06.2021). Pinnacle steht nicht auf der
-Whitelist und dient nur als Referenz für die faire Quote – nie angezeigt,
-nie verlinkt. Die GGL veröffentlicht keine Erlaubnisnummern.
+Value-Tipps rechnen nur mit Tipico und Winamax: Nur von ihnen liefert The
+Odds API die deutsche Seite, die Quoten sind also genau so spielbar
+(GGL-Whitelist, geprüft am 13.10.2026: Tipico Co. Limited seit 09.10.2020,
+WINAMAX SA seit 29.06.2021).
+
+Zusätzlich angezeigt werden Betway, Betano und LeoVegas – Anbieter mit
+deutscher Erlaubnis für ihre .de-Seite (geprüft am 14.10.2026: Betway Limited
+seit 09.03.2021, Betkick Sportsbetting Limited/betano.de seit 19.02.2021,
+LVSports Limited/leovegas.de seit 21.10.2024). The Odds API liefert von ihnen
+aber nur die UK-Seite. Diese Quoten sind als „Auslandsversion – Richtwert“
+gekennzeichnet, fließen in die faire Quote ein, zählen aber nie als Value-Tipp;
+liegen sie über fair, erscheinen sie getrennt als Hinweis zum Gegenprüfen.
+Bis 10 Buchmacher kostet ein Abruf weiterhin 1 Credit je Markt.
+
+Andere Anbieter der Whitelist (bwin, bet365, Interwetten, Merkur, Oddset u. a.)
+liefert The Odds API nicht. Pinnacle steht nicht auf der Whitelist und dient
+nur als Referenz für die faire Quote – nie angezeigt, nie verlinkt. Die GGL
+veröffentlicht keine Erlaubnisnummern.
 
 ## Quoten und Value
 
@@ -158,15 +172,16 @@ Code in `src/lib/odds/`, Parameter in `src/config/value.ts`:
 
 1. Marge je Anbieter entfernen: Power (Hauptmethode), proportional und Shin zum Vergleich.
 2. Faire Wahrscheinlichkeit = Konsens aller Anbieter, gewichtet mit 1 / Marge.
-3. EV = faire Wahrscheinlichkeit × beste Quote eines zugelassenen Anbieters − 1.
+3. EV = faire Wahrscheinlichkeit × beste Quote einer deutschen Seite − 1.
 4. Kelly f = (p·q − 1) / (q − 1), angezeigt wird ein Viertel.
-5. Nur EV ≥ 2 %; Top 3 nach EV je Schwankung der Auszahlung.
+5. Nur EV ≥ 2 %; Top 3 je Spiel nach EV je Schwankung der Auszahlung. Die
+   Startseite sammelt alle Tipps der nächsten 14 Tage (`src/lib/odds/board.ts`).
 6. Quoten älter als 15 Minuten werden als veraltet gekennzeichnet.
 
 Jugendschutz und Spielerschutz (Abschnitt 8): Altersabfrage (18+) serverseitig
 vor jedem Quotenbereich, dauerhafter Hinweis auf die Beratung des BIÖG
 (früher BZgA, 0800 1 37 27 00, check-dein-spiel.de), keine Affiliate-Links,
-nüchterne Sprache ohne Tipps oder Gewinnversprechen. Impressum, Datenschutz
+Value-Tipps als Modellrechnung gekennzeichnet, ohne Gewinnversprechen. Impressum, Datenschutz
 und Cookie-Banner fehlen noch – die Seite läuft daher nur lokal oder online
 hinter einem Passwort.
 

@@ -1,9 +1,9 @@
 import "server-only";
-import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/db";
 import { bookmakers, competitions, matches, oddsSnapshots, teams } from "@/db/schema";
-import { analyzeMarket, type MarketAnalysis, type MarketInput, valueBets } from "@/lib/odds/value";
+import { abroadHints, analyzeMarket, type MarketAnalysis, type MarketInput, valueBets } from "@/lib/odds/value";
 import { sourceResolver } from "./sources";
 
 /** Feste Reihenfolge der Ausgänge je Markt. */
@@ -83,22 +83,22 @@ export async function getMatchOdds(matchId: number, now: Date = new Date()) {
   return {
     markets,
     ...valueBets(markets),
+    hints: abroadHints(markets),
     source: newest ? ref(newest.sourceId, newest.fetchedAt, newest.sourceUrl) : null,
   };
 }
 
-/** Übersicht: kommende Spiele mit Quoten und ihrer besten Value-Wette. */
-export async function getValueOverview(now: Date = new Date(), limit = 20) {
+/** Kommende Spiele mit Quoten, inklusive Wettbewerb und Teamnamen. */
+async function upcomingWithOdds(now: Date, until: Date | null, limit: number) {
   const home = alias(teams, "home");
   const away = alias(teams, "away");
-  const withOdds = getDb()
-    .selectDistinct({ matchId: oddsSnapshots.matchId })
-    .from(oddsSnapshots);
-  const upcoming = await getDb()
+  const withOdds = getDb().selectDistinct({ matchId: oddsSnapshots.matchId }).from(oddsSnapshots);
+  return getDb()
     .select({
       id: matches.id,
       kickoffAt: matches.kickoffAt,
       kickoffTimeKnown: matches.kickoffTimeKnown,
+      competitionCode: competitions.code,
       competition: competitions.name,
       isTestData: competitions.isTestData,
       homeName: home.name,
@@ -108,9 +108,40 @@ export async function getValueOverview(now: Date = new Date(), limit = 20) {
     .innerJoin(competitions, eq(competitions.id, matches.competitionId))
     .innerJoin(home, eq(home.id, matches.homeTeamId))
     .innerJoin(away, eq(away.id, matches.awayTeamId))
-    .where(and(gt(matches.kickoffAt, now), inArray(matches.id, withOdds)))
+    .where(and(gt(matches.kickoffAt, now), until ? lt(matches.kickoffAt, until) : undefined, inArray(matches.id, withOdds)))
     .orderBy(asc(matches.kickoffAt))
     .limit(limit);
+}
+
+export type BoardMatch = Awaited<ReturnType<typeof upcomingWithOdds>>[number];
+export type ValueBoard = Awaited<ReturnType<typeof getValueBoard>>;
+
+/**
+ * Alle Value-Tipps der kommenden Tage über alle Spiele hinweg – Grundlage
+ * der Startseite. Gefiltert und sortiert wird in `lib/odds/board.ts`.
+ */
+export async function getValueBoard(now: Date = new Date(), days = 14) {
+  const until = new Date(now.getTime() + days * 86_400_000);
+  const upcoming = await upcomingWithOdds(now, until, 300);
+  const rows = await latestSnapshots(upcoming.map((m) => m.id));
+  const byMatch = new Map<number, Snapshot[]>();
+  for (const r of rows) byMatch.set(r.matchId, [...(byMatch.get(r.matchId) ?? []), r]);
+  const tips = [];
+  const hints = [];
+  for (const m of upcoming) {
+    const markets = toMarketInputs(byMatch.get(m.id) ?? [])
+      .map((x) => analyzeMarket(x, now))
+      .filter((x): x is MarketAnalysis => x !== null);
+    tips.push(...valueBets(markets).all.map((bet) => ({ match: m, bet })));
+    hints.push(...abroadHints(markets).map((hint) => ({ match: m, hint })));
+  }
+  const newest = rows.reduce<Date | null>((d, r) => (!d || r.fetchedAt > d ? r.fetchedAt : d), null);
+  return { tips, hints, matchCount: upcoming.length, newestFetchedAt: newest, days };
+}
+
+/** Übersicht: kommende Spiele mit Quoten und ihrer besten Value-Wette. */
+export async function getValueOverview(now: Date = new Date(), limit = 60) {
+  const upcoming = await upcomingWithOdds(now, null, limit);
 
   const rows = await latestSnapshots(upcoming.map((m) => m.id));
   return upcoming.map((m) => {

@@ -1,17 +1,16 @@
 /** Spielt alle Migrationen aus ./drizzle ein. */
 import { config } from "dotenv";
-import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
+import { createDb } from "../src/db/client";
 import { parseServerEnv } from "../src/lib/env";
 
 config({ path: ".env.local" });
 
 async function main() {
   const env = parseServerEnv(process.env);
-  const client = postgres(env.DATABASE_URL, { max: 1, onnotice: () => {} });
+  const { db, client } = createDb(env.DATABASE_URL, 1);
   try {
-    await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
+    await migrate(db, { migrationsFolder: "./drizzle" });
     console.log("Migrationen eingespielt.");
   } finally {
     await client.end();

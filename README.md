@@ -56,6 +56,12 @@ solange die Veröffentlichungs-Checkliste aus Abschnitt 8 nicht erledigt ist.
 Ohne `SITE_PASSWORD` ist die Seite offen – lokal gewollt, online nicht.
 Neue Commits auf `main` werden von Vercel automatisch ausgeliefert.
 
+Die Server-Funktionen laufen in Frankfurt (`vercel.json`, Region `fra1`),
+neben der Datenbank – Vercels Standard wäre Washington, und jede Abfrage
+müsste über den Atlantik. Aus demselben Grund schreibt die Ingestion
+gebündelt (viele Zeilen je Statement): Der Abruf aus GitHub Actions (USA)
+dauert so rund eine Minute statt über einer Viertelstunde.
+
 ## Seiten
 
 | Pfad | Inhalt |

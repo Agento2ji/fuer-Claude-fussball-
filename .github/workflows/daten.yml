@@ -3,7 +3,8 @@ name: Daten
 # Füllt die Online-Datenbank (Neon). Täglich und auf Knopfdruck.
 # Braucht das Repository-Secret DATABASE_URL (Verbindungs-String von Neon).
 # Optional THE_ODDS_API_KEY für echte Quoten: 2 Credits je Wettbewerb und
-# Abruf, einmal täglich also höchstens ca. 430 der 500 Credits im Monat.
+# Abruf. Wettbewerbe ohne anstehende Spiele werden übersprungen; für die
+# 5 Ligen einmal täglich also ca. 310 der 500 Credits im Monat.
 
 on:
   workflow_dispatch:

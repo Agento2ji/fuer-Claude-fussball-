@@ -2,6 +2,8 @@ name: Daten
 
 # Füllt die Online-Datenbank (Neon). Täglich und auf Knopfdruck.
 # Braucht das Repository-Secret DATABASE_URL (Verbindungs-String von Neon).
+# Optional THE_ODDS_API_KEY für echte Quoten: 2 Credits je Wettbewerb und
+# Abruf, einmal täglich also höchstens ca. 430 der 500 Credits im Monat.
 
 on:
   workflow_dispatch:
@@ -23,6 +25,7 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
     steps:
       - name: Secret vorhanden?
         run: |
@@ -39,6 +42,8 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm run ingest -- spiele
+      # Ohne THE_ODDS_API_KEY wird der Abruf übersprungen, nicht erfunden.
+      - run: npm run ingest -- quoten
       # Testdaten liegen relativ zum heutigen Datum; täglich auffrischen,
       # solange sie gewünscht sind (beim Zeitplan immer, von Hand abwählbar).
       - if: github.event_name == 'schedule' || inputs.testdaten

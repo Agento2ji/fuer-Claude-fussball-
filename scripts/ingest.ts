@@ -60,6 +60,15 @@ async function main() {
     if (typeof d.anbieter === "string") console.log(`  Anbieter: ${d.anbieter}`);
     for (const w of (d.warnings as string[] | undefined) ?? []) console.log(`  Hinweis: ${w}`);
     if (typeof d.conflicts === "number" && d.conflicts > 0) console.log(`  Neue Quellenkonflikte: ${d.conflicts}`);
+    for (const a of (d.versuche as { provider: string; outcome: string; error?: string }[] | undefined) ?? []) {
+      if (a.outcome === "fehlgeschlagen") console.log(`  ${a.provider} fehlgeschlagen: ${a.error ?? "?"}`);
+    }
+    const unmatched = (d.nichtZugeordnet as string[] | undefined) ?? [];
+    if (unmatched.length) console.log(`  Keinem Spiel zugeordnet (${unmatched.length}): ${unmatched.slice(0, 5).join("; ")}`);
+    const quota = d.kontingent as Record<string, string> | undefined;
+    if (quota?.["x-requests-remaining"]) {
+      console.log(`  Kontingent: ${quota["x-requests-remaining"]} übrig, ${quota["x-requests-used"] ?? "?"} verbraucht`);
+    }
     if (r.job === "testdaten") console.log(`  ${JSON.stringify(d)}`);
   }
   if (reports.some((r) => r.status === "failed")) process.exitCode = 1;

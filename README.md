@@ -44,7 +44,9 @@ solange die Veröffentlichungs-Checkliste aus Abschnitt 8 nicht erledigt ist.
    Verbindungs-String mit „Connection pooling“ kopieren
    (`postgresql://…-pooler.…/neondb?sslmode=require`).
 2. **GitHub:** Repository → Settings → Secrets and variables → Actions →
-   Secret `DATABASE_URL` mit diesem String anlegen.
+   Secret `DATABASE_URL` mit diesem String anlegen. Für echte Quoten
+   zusätzlich `THE_ODDS_API_KEY` (Vercel braucht ihn nicht – die App liest
+   nur aus der Datenbank).
 3. **Daten:** Actions → „Daten“ → „Run workflow“. Der Job migriert, seedet
    und ruft Spiele (und auf Wunsch die Testliga) ab; danach täglich um
    04:17 UTC von selbst.
@@ -126,7 +128,7 @@ Vorgabe: zunächst 0 € Budget. Stand der Recherche: 13.10.2026.
 | [openfootball](https://github.com/openfootball/football.json) | Spielpläne, Endergebnisse (Top-5-Ligen) | 0 € | keins (GitHub Raw) | Gemeinfrei (CC0). Ohne Champions/Europa League. Ergebnisse hinken teils Wochen hinterher (Stand 13.10.: letztes Ergebnis vom 20.09.); Anstoßzeit oft nur als Datum | aktiv |
 | [API-Football](https://www.api-football.com) | Spiele, Aufstellungen, Spielerstatistik, Verletzungen | 0 €; Bezahltarife laut Anbieter-Blog ab ca. 15–19 $/Monat (unbestätigt) | 100 Abrufe/Tag | Kostenlos nur „aktuelle Saisons“; Zugriff auf laufende Saison und Verletzungen noch mit eigenem Key prüfen | geplant |
 | [football-data.org](https://www.football-data.org/pricing) | Spielpläne, Tabellen, Ergebnisse | 0 €; Aufstellungen/Karten ab 29 €/Monat | 10 Abrufe/Minute | Kostenlos: 12 Wettbewerbe ohne Europa League, Ergebnisse verzögert, keine Aufstellungen | geplant |
-| [The Odds API](https://the-odds-api.com) | Quoten Tipico, Winamax, Pinnacle | 0 €; 59 $/Monat für 100.000 Credits | 500 Credits/Monat | 1 Credit je Markt und Region; reicht für ca. einen Abruf pro Tag über alle 7 Wettbewerbe | geplant |
+| [The Odds API](https://the-odds-api.com) | Quoten Tipico, Winamax, Pinnacle | 0 €; 59 $/Monat für 100.000 Credits | 500 Credits/Monat | 1 Credit je Markt und je 10 Buchmacher, also 2 Credits je Wettbewerb (1X2, Über/Unter); leere Antworten kostenlos. Täglicher Abruf aller 7 Wettbewerbe ≤ ca. 430 Credits/Monat | aktiv (mit Key) |
 | Understat | xG, xA | – | – | robots.txt sperrt alles | verworfen |
 | FBref | xG, xA | – | – | robots.txt nicht abrufbar (403); Bedingungen zu prüfen | offen |
 | Transfermarkt | Verträge, Marktwerte | – | – | Keine öffentliche API; robots.txt erlaubt Profilseiten, Nutzungsbedingungen noch zu prüfen | offen |
@@ -193,11 +195,11 @@ Fallback-Kette und landen nie automatisch im Produktivpfad.
 | Thema | Stand | Was es braucht |
 | --- | --- | --- |
 | Echte Spielerdaten, Ausfälle, Aufstellungen | nur Testdaten | kostenlose Keys für API-Football bzw. football-data.org |
-| Echte Quoten | nur Testdaten | kostenloser Key für The Odds API (500 Credits/Monat ≈ ein Abruf pro Tag) |
+| Häufigere Quoten | einmal täglich, danach als veraltet gekennzeichnet | mehr Credits (kostenpflichtig) oder weniger Wettbewerbe |
 | Champions und Europa League | keine Quelle | Key für football-data.org oder API-Football |
 | Senderangaben für echte Spiele | keine geprüfte Quelle | Entscheidung, ob eine belegte Rechte-Übersicht genügt |
 | Scraper offizieller Seiten | nicht gebaut | Prüfung der Nutzungsbedingungen je Seite |
-| Regelmäßige Abrufe | täglich per GitHub Actions (`daten.yml`), nur Spiele und Testliga | Quoten erst mit Key für The Odds API |
+| Regelmäßige Abrufe | täglich per GitHub Actions (`daten.yml`): Spiele, Quoten (mit `THE_ODDS_API_KEY`), Testliga | – |
 | Veröffentlichung | lokal oder privat online mit Passwort | Impressum, Datenschutzerklärung, Cookie-Banner, Rechtelage für Logos; Checkliste aus Abschnitt 8 gemeinsam durchgehen |
 
 Ideen aus Abschnitt 12, die auf der Datenbasis direkt aufsetzen: Quotenbewegung

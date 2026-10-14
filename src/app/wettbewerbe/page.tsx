@@ -1,4 +1,5 @@
 import { ChevronRight, FlaskConical } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { dateLong } from "@/lib/format";
 import { kickoffText } from "@/lib/format";
@@ -6,8 +7,12 @@ import { latestResultDates, listCompetitionsWithData } from "@/lib/queries/compe
 import { upcomingMatches } from "@/lib/queries/match";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Ligen und Spiele",
+  description: "Nächste Spiele und alle Wettbewerbe mit Tabelle und Datenstand.",
+};
 
-export default async function Home() {
+export default async function LeaguesPage() {
   const now = new Date();
   const [competitions, lastResults, next] = await Promise.all([
     listCompetitionsWithData(),
@@ -18,8 +23,8 @@ export default async function Home() {
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 pt-6 pb-16">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Fußball-Hub</h1>
-        <p className="mt-1 text-muted-foreground">Wer spielt, wer fehlt, wer ist in Form.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Ligen und Spiele</h1>
+        <p className="mt-1 text-muted-foreground">Spielpläne, Tabellen und Teams als Hintergrund zu den Quoten.</p>
       </div>
 
       {next.length > 0 && (
@@ -66,7 +71,7 @@ export default async function Home() {
                   <div className="flex items-center gap-3 px-4 py-3 text-muted-foreground">
                     <span className="flex-1">
                       <span className="block">{c.name}</span>
-                      <span className="block text-xs">Noch keine Quelle ohne API-Key</span>
+                      <span className="block text-xs">Keine Daten im kostenlosen Tarif</span>
                     </span>
                   </div>
                 )}

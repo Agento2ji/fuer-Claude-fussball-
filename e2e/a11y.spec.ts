@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * Barrierefreiheit (WCAG 2.1 AA) über alle Seitentypen, hell und dunkel.
  * Keine Verstöße der Stufen „serious“ oder „critical“ erlaubt.
  */
-const PAGES = ["/", "/spieler", "/quoten"];
+const PAGES = ["/", "/?markt=totals&sort=ev", "/wettbewerbe", "/spieler", "/quoten"];
 
 async function dynamicPages(page: import("@playwright/test").Page) {
   await page.goto("/wettbewerbe/TEST");

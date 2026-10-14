@@ -28,9 +28,9 @@ export function GamblingHelpNotice() {
 export function ValueDisclaimer() {
   return (
     <p className="text-xs leading-relaxed text-muted-foreground">
-      Der Erwartungswert ist eine Modellrechnung. Ein positiver Wert heißt nur, dass ein Anbieter vom Konsens der
-      anderen abweicht – nicht, dass die Wette gewinnt. Buchmacher bleiben langfristig im Vorteil. Diese Seite
-      enthält keine Affiliate-Links und keine Wettempfehlung.
+      Value-Tipps sind eine Modellrechnung: Die Quote liegt über dem fairen Preis aus dem Konsens aller Anbieter.
+      Das heißt nicht, dass die Wette gewinnt – auch Wetten mit positivem Erwartungswert gehen oft verloren, der
+      Vorteil zeigt sich erst über viele Wetten, und das Modell kann irren. Keine Affiliate-Links.
     </p>
   );
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AgeGate, GamblingHelpNotice, ValueDisclaimer } from "@/components/gambling-notice";
-import { LicenseCard, MarketTable, ValueBetCards } from "@/components/odds-view";
+import { AbroadHintList, LicenseCard, MarketTable, type TipMatch, ValueBetCards } from "@/components/odds-view";
 import { SourceFootnote } from "@/components/source-note";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isAgeConfirmed } from "@/lib/age-gate-check";
@@ -42,14 +42,25 @@ export default async function MatchOddsPage({ params }: Props) {
       {!confirmed ? (
         <AgeGate />
       ) : (
-        <OddsContent matchId={matchId} home={home} away={away} isTestData={match.competition.isTestData} />
+        <OddsContent
+          match={{
+            id: matchId,
+            kickoffAt: match.match.kickoffAt,
+            kickoffTimeKnown: match.match.kickoffTimeKnown,
+            competition: match.competition.name,
+            isTestData: match.competition.isTestData,
+            homeName: home,
+            awayName: away,
+          }}
+        />
       )}
     </main>
   );
 }
 
-async function OddsContent({ matchId, home, away, isTestData }: { matchId: number; home: string; away: string; isTestData: boolean }) {
-  const odds = await getMatchOdds(matchId);
+async function OddsContent({ match }: { match: TipMatch }) {
+  const { homeName: home, awayName: away, isTestData } = match;
+  const odds = await getMatchOdds(match.id);
   return (
     <>
       <GamblingHelpNotice />
@@ -67,9 +78,10 @@ async function OddsContent({ matchId, home, away, isTestData }: { matchId: numbe
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Auffällige Abweichungen</CardTitle>
+              <CardTitle>Value-Tipps</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Bis zu drei Tipps mit dem besten Verhältnis aus Erwartungswert und Schwankung.
+                Bis zu drei Tipps mit dem besten Verhältnis aus Erwartungswert und Schwankung, nur mit Quoten, die in
+                Deutschland spielbar sind.
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -77,6 +89,13 @@ async function OddsContent({ matchId, home, away, isTestData }: { matchId: numbe
               <ValueDisclaimer />
             </CardContent>
           </Card>
+          {odds.hints.length > 0 && (
+            <section aria-labelledby="ausland" className="space-y-2">
+              <h2 id="ausland" className="text-sm font-medium">Nur in Auslandsversionen über fair</h2>
+              <p className="text-xs text-muted-foreground">Richtwert – auf der deutschen Seite des Anbieters prüfen.</p>
+              <AbroadHintList items={odds.hints.map((hint) => ({ hint, match, showMatch: false }))} />
+            </section>
+          )}
           {odds.markets.map((m) => (
             <MarketTable key={`${m.market}-${m.line}`} market={m} home={home} away={away} />
           ))}

@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "Fußball-Hub", template: "%s · Fußball-Hub" },
   description:
-    "Spielerstatus, Statistik, Formbewertung und Quotenvergleich an einem Ort.",
+    "Quotenvergleich und Value-Tipps für die großen Fußball-Ligen – mit Statistik als Hintergrund.",
 };
 
 export const viewport: Viewport = {
@@ -46,11 +46,14 @@ export default function RootLayout({
               </Link>
               <nav aria-label="Hauptnavigation" className="flex items-center gap-1 text-sm">
                 <SearchDialog />
-                <Link href="/spieler" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
-                  Spieler
+                <Link href="/" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
+                  Value
                 </Link>
                 <Link href="/quoten" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
                   Quoten
+                </Link>
+                <Link href="/wettbewerbe" className="rounded-md px-2 py-1 text-muted-foreground hover:text-foreground">
+                  Ligen
                 </Link>
                 <ThemeToggle />
               </nav>

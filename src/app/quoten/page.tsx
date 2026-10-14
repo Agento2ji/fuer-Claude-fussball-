@@ -8,7 +8,7 @@ import { marketLabel, selectionLabel } from "@/lib/odds/labels";
 import { getValueOverview } from "@/lib/queries/odds";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Quoten", robots: { index: false } };
+export const metadata: Metadata = { title: "Quoten aller Spiele", robots: { index: false } };
 
 const pct1 = new Intl.NumberFormat("de-DE", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -16,7 +16,7 @@ export default async function OddsOverviewPage() {
   const confirmed = await isAgeConfirmed();
   return (
     <main className="mx-auto max-w-2xl space-y-4 px-4 pt-4 pb-16">
-      <h1 className="text-2xl font-semibold tracking-tight">Quoten</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Quoten aller Spiele</h1>
       {!confirmed ? <AgeGate /> : <Overview />}
     </main>
   );
@@ -29,7 +29,7 @@ async function Overview() {
       <GamblingHelpNotice />
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Keine kommenden Spiele mit Quoten. Echte Quoten gibt es erst mit einem Key für The Odds API.
+          Keine kommenden Spiele mit Quoten. Quoten kommen einmal täglich gegen 06:17 Uhr.
         </p>
       ) : (
         <ul className="divide-y rounded-xl border bg-card">
@@ -44,8 +44,8 @@ async function Overview() {
                   <span className="block truncate">{r.homeName} – {r.awayName}</span>
                   <span className="block text-xs text-muted-foreground">
                     {r.best
-                      ? `${r.valueCount} auffällige ${r.valueCount === 1 ? "Abweichung" : "Abweichungen"} · stärkste: ${selectionLabel(r.best.market, r.best.selection, r.best.line, r.homeName, r.awayName)} (${marketLabel(r.best.market, r.best.line)}), EV ${pct1.format(r.best.ev!)}`
-                      : "Keine Abweichung über 2 % EV"}
+                      ? `${r.valueCount} Value-${r.valueCount === 1 ? "Tipp" : "Tipps"} · bester: ${selectionLabel(r.best.market, r.best.selection, r.best.line, r.homeName, r.awayName)} (${marketLabel(r.best.market, r.best.line)}), EV ${pct1.format(r.best.ev!)}`
+                      : "Kein Value-Tipp über 2 % EV"}
                   </span>
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BOOKMAKERS } from "@/config/bookmakers";
+import { BOOKMAKERS, bookmakerLabel, isPlayableInGermany } from "@/config/bookmakers";
 import { COMPETITIONS, getCompetition } from "@/config/competitions";
 import { DATA_SOURCES } from "@/config/data-sources";
 
@@ -40,11 +40,23 @@ describe("Buchmacher", () => {
     expect(pinnacle?.useForFairPrice).toBe(true);
   });
 
-  it("vergleichen nur Tipico und Winamax", () => {
-    const shown = BOOKMAKERS.filter((b) => b.showInComparison).map(
-      (b) => b.key,
-    );
-    expect(shown.sort()).toEqual(["tipico", "winamax"]);
+  it("zeigen nur Anbieter mit deutscher Erlaubnis", () => {
+    for (const b of BOOKMAKERS.filter((x) => x.showInComparison)) expect(b.ggl).not.toBeNull();
+  });
+
+  it("rechnen Value-Tipps nur mit deutschen Seiten (Tipico, Winamax)", () => {
+    const playable = BOOKMAKERS.filter(isPlayableInGermany).map((b) => b.key);
+    expect(playable.sort()).toEqual(["tipico", "winamax"]);
+  });
+
+  it("kennzeichnen Auslandsversionen mit ihrer Seite", () => {
+    const abroad = BOOKMAKERS.filter((b) => b.showInComparison && b.site === "ausland");
+    expect(abroad.map((b) => b.key).sort()).toEqual(["betano", "betway", "leovegas"]);
+    for (const b of abroad) expect(bookmakerLabel(b)).toMatch(/\(UK\)$/);
+  });
+
+  it("bleiben unter 10 Anbietern, damit ein Abruf 1 Credit je Markt kostet", () => {
+    expect(BOOKMAKERS.length).toBeLessThanOrEqual(10);
   });
 });
 

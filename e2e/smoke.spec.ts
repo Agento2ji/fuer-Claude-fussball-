@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("Startseite führt über Tabelle und Team zur Spielerseite", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Fußball-Hub", level: 1 })).toBeVisible();
+test("Ligen führen über Tabelle und Team zur Spielerseite", async ({ page }) => {
+  await page.goto("/wettbewerbe");
+  await expect(page.getByRole("heading", { name: "Ligen und Spiele", level: 1 })).toBeVisible();
 
   await page.locator("main a[href='/wettbewerbe/TEST']").click();
   await expect(page.getByRole("heading", { name: /Testliga/, level: 1 })).toBeVisible();
@@ -72,12 +72,33 @@ test("Quoten erst nach Altersbestätigung, mit Hilfehinweis und ohne Pinnacle", 
   await page.getByRole("button", { name: "Weiter zu den Quoten" }).click();
   await page.locator("main a[href$='/quoten']").first().click();
 
-  await expect(page.getByText("Auffällige Abweichungen")).toBeVisible();
+  await expect(page.getByText("Value-Tipps", { exact: true })).toBeVisible();
   await expect(page.getByText("0800 1 37 27 00")).toBeVisible();
   await expect(page.getByText(/Modellrechnung/).first()).toBeVisible();
   await expect(page.getByRole("table").first()).toContainText("Tipico");
   await expect(page.getByRole("table").first()).toContainText("Winamax");
   await expect(page.locator("main")).not.toContainText("Pinnacle");
+});
+
+test("Startseite zeigt Value-Tipps über alle Spiele, filterbar", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Value-Tipps", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quoten nur ab 18 Jahren" })).toBeVisible();
+  await page.getByLabel("Ich bin mindestens 18 Jahre alt.").check();
+  await page.getByRole("button", { name: "Weiter zu den Quoten" }).click();
+
+  const cards = page.locator("main ol > li");
+  await expect(cards.first()).toBeVisible();
+  await expect(cards.first()).toContainText("EV");
+  await expect(page.getByText("0800 1 37 27 00")).toBeVisible();
+
+  await page.getByRole("navigation", { name: "Filter" }).getByRole("link", { name: "1X2" }).click();
+  await expect(page).toHaveURL(/markt=h2h/);
+  await expect(cards.first()).toBeVisible();
+  for (const text of await cards.allTextContents()) expect(text).toContain("Ergebnis (1X2)");
+
+  await cards.first().getByRole("link").click();
+  await expect(page.getByRole("heading", { name: "Quotenvergleich", level: 1 })).toBeVisible();
 });
 
 test("Suche per Tastatur: / öffnet, Pfeiltasten wählen, Enter öffnet", async ({ page }) => {

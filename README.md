@@ -28,7 +28,7 @@ Ohne Docker: eine eigene Postgres-Datenbank anlegen, `DATABASE_URL` in
 | `npm run db:generate` | Migration aus `src/db/schema.ts` erzeugen |
 | `npm run db:migrate` | Migrationen einspielen |
 | `npm run db:seed` | Quellen, Wettbewerbe, Buchmacher aus `src/config` übertragen |
-| `npm run ingest -- spiele [CODE …]` | Spielpläne und Ergebnisse abrufen (Standard: alle Wettbewerbe) |
+| `npm run ingest -- spiele [CODE …]` | Spielpläne und Ergebnisse abrufen (Standard: alle Wettbewerbe); mit `--probelauf` wird nur abgerufen und zugeordnet, nichts gespeichert |
 | `npm run ingest -- quoten [CODE …]` | Quoten abrufen (braucht `THE_ODDS_API_KEY`, sonst übersprungen) |
 | `npm run ingest -- testdaten` | Erfundene „Testliga“ einspielen (siehe unten) |
 | `npm run lint` / `typecheck` / `test` | Prüfungen wie in der CI |
@@ -45,8 +45,11 @@ solange die Veröffentlichungs-Checkliste aus Abschnitt 8 nicht erledigt ist.
    (`postgresql://…-pooler.…/neondb?sslmode=require`).
 2. **GitHub:** Repository → Settings → Secrets and variables → Actions →
    Secret `DATABASE_URL` mit diesem String anlegen. Für echte Quoten
-   zusätzlich `THE_ODDS_API_KEY` (Vercel braucht ihn nicht – die App liest
-   nur aus der Datenbank).
+   zusätzlich `THE_ODDS_API_KEY`, für aktuelle Spielpläne und Ergebnisse
+   `FOOTBALL_DATA_API_KEY` (Vercel braucht beide nicht – die App liest nur
+   aus der Datenbank). Vor dem ersten Abruf mit einer neuen Quelle lohnt
+   „Run workflow“ mit „Probelauf“: Er zeigt, welche Teams neu angelegt
+   würden, und speichert nichts.
 3. **Daten:** Actions → „Daten“ → „Run workflow“. Der Job migriert, seedet
    und ruft Spiele (und auf Wunsch die Testliga) ab; danach täglich um
    04:17 UTC von selbst.

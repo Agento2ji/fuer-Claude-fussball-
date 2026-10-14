@@ -5,6 +5,8 @@ name: Daten
 # Optional THE_ODDS_API_KEY für echte Quoten: 2 Credits je Wettbewerb und
 # Abruf. Wettbewerbe ohne anstehende Spiele werden übersprungen; für die
 # 5 Ligen einmal täglich also ca. 310 der 500 Credits im Monat.
+# Optional FOOTBALL_DATA_API_KEY: Spielpläne und Ergebnisse von
+# football-data.org statt openfootball (aktueller, mit Anstoßzeiten und CL).
 
 on:
   workflow_dispatch:
@@ -13,6 +15,10 @@ on:
         description: "Testliga (erfundene, gekennzeichnete Daten) einspielen"
         type: boolean
         default: true
+      probelauf:
+        description: "Nur Probelauf Spiele: abrufen und zuordnen, nichts speichern"
+        type: boolean
+        default: false
   schedule:
     - cron: "17 4 * * *"
 
@@ -27,6 +33,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
     steps:
       - name: Secret vorhanden?
         run: |
@@ -42,10 +49,14 @@ jobs:
       - run: npm ci
       - run: npm run db:migrate
       - run: npm run db:seed
-      - run: npm run ingest -- spiele
+      - if: inputs.probelauf
+        run: npm run ingest -- spiele --probelauf
+      - if: ${{ !inputs.probelauf }}
+        run: npm run ingest -- spiele
       # Ohne THE_ODDS_API_KEY wird der Abruf übersprungen, nicht erfunden.
-      - run: npm run ingest -- quoten
+      - if: ${{ !inputs.probelauf }}
+        run: npm run ingest -- quoten
       # Testdaten liegen relativ zum heutigen Datum; täglich auffrischen,
       # solange sie gewünscht sind (beim Zeitplan immer, von Hand abwählbar).
-      - if: github.event_name == 'schedule' || inputs.testdaten
+      - if: ${{ !inputs.probelauf && (github.event_name == 'schedule' || inputs.testdaten) }}
         run: npm run ingest -- testdaten

@@ -78,7 +78,11 @@ async function main() {
     for (const w of (d.warnings as string[] | undefined) ?? []) console.log(`  Hinweis: ${w}`);
     const newTeams = (d.newTeams as string[] | undefined) ?? [];
     if (newTeams.length) console.log(`  Neue Teams (${newTeams.length}): ${newTeams.join("; ")}`);
+    if (typeof d.inserted === "number") {
+      console.log(`  Spiele: ${d.inserted} neu, ${d.updated} aktualisiert, ${d.unchanged} unverändert`);
+    }
     if (typeof d.conflicts === "number" && d.conflicts > 0) console.log(`  Neue Quellenkonflikte: ${d.conflicts}`);
+    for (const c of ((d.conflictDetails as string[] | undefined) ?? []).slice(0, 8)) console.log(`    ${c}`);
     for (const a of (d.versuche as { provider: string; outcome: string; error?: string }[] | undefined) ?? []) {
       if (a.outcome === "fehlgeschlagen") console.log(`  ${a.provider} fehlgeschlagen: ${a.error ?? "?"}`);
     }
